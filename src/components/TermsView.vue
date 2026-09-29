@@ -2,9 +2,7 @@
   <div class="view-container">
     <!-- Header -->
     <header class="app-header">
-      <button class="back-btn" @click="$emit('goBack')">
-        <ArrowLeftIcon size="24" />
-      </button>
+      <span class="header-spacer"></span>
       <h2 class="header-title">Privacidade e Termos</h2>
       <button class="menu-btn" @click="$emit('openSidebar')">
         <MenuIcon size="24" stroke-width="2.5" />
@@ -132,24 +130,33 @@
           </section>
         </div>
 
-        <button class="accept-terms-btn" @click="$emit('goBack')">
+        <button class="accept-terms-btn" @click="$emit('navigate', 'profile')">
           Entendi e Aceito
         </button>
       </div>
     </div>
+    <nav class="bottom-nav">
+      <div class="nav-item" @click="$emit('navigate', 'home')"><HomeIcon size="28" /><span>Início</span></div>
+      <div class="nav-item" @click="$emit('navigate', 'conversations')"><MessageCircleIcon size="28" /><span>Chats</span></div>
+      <div class="nav-item" @click="$emit('navigate', 'friends')"><UsersIcon size="28" /><span>Amigos</span></div>
+      <div class="nav-item active" @click="$emit('navigate', 'profile')"><UserIcon size="28" /><span>Perfil</span></div>
+    </nav>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import { 
-  ArrowLeft as ArrowLeftIcon, 
+import {
+  Home as HomeIcon,
   Menu as MenuIcon,
+  MessageCircle as MessageCircleIcon,
   Scroll as ScrollIcon,
-  Shield as ShieldIcon
+  Shield as ShieldIcon,
+  User as UserIcon,
+  Users as UsersIcon
 } from '@lucide/vue'
 
-defineEmits(['goBack', 'openSidebar'])
+defineEmits(['goBack', 'openSidebar', 'navigate'])
 
 const activeTab = ref('terms')
 </script>
@@ -379,4 +386,13 @@ const activeTab = ref('terms')
 .accept-terms-btn:active {
   transform: translateY(0);
 }
+</style>
+
+<style scoped>
+.header-spacer { width: 32px; height: 32px; }
+.content-scroll { padding-bottom: 120px; }
+.bottom-nav { display:flex; justify-content:space-around; align-items:center; height:72px; background:white; border-top:1px solid #e2e8f0; position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; z-index:80; }
+.nav-item { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; color:#94a3b8; cursor:pointer; height:100%; }
+.nav-item.active { color:#1c5bf0; }
+.nav-item span { font-size:11px; font-weight:500; }
 </style>

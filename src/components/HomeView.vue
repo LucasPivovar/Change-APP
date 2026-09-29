@@ -38,6 +38,14 @@
         </div>
       </div>
 
+      <div class="practice-card">
+        <img src="../assets/2.png" alt="Camaleão" />
+        <div>
+          <strong>{{ practiceTitle }}</strong>
+          <p>{{ practiceText }}</p>
+        </div>
+      </div>
+
     </div>
     <nav class="bottom-nav">
       <div class="nav-item active" @click="$emit('navigate', 'home')">
@@ -47,6 +55,10 @@
       <div class="nav-item" @click="$emit('navigate', 'conversations')">
         <MessageCircleIcon size="28" />
         <span>{{ t('nav_chats') }}</span>
+      </div>
+      <div class="nav-item" @click="$emit('navigate', 'friends')">
+        <UsersIcon size="28" />
+        <span>Amigos</span>
       </div>
       <div class="nav-item" @click="$emit('navigate', 'profile')">
         <UserIcon size="28" />
@@ -61,11 +73,20 @@ import {
   Home as HomeIcon, 
   MessageCircle as MessageCircleIcon, 
   User as UserIcon,
+  Users as UsersIcon,
   Menu as MenuIcon
 } from '@lucide/vue'
 import { t } from '../data/translations.js'
+import { computed, onMounted, ref } from 'vue'
+import { profileApi } from '../services/chatApi'
 
 defineEmits(['selectLanguage', 'openSidebar', 'navigate'])
+const stats = ref({ streakDays: 0, practicedSeconds: 0 })
+const practiceTitle = computed(() => stats.value.streakDays > 0 ? `Você já está há ${stats.value.streakDays} dias praticando` : 'Comece sua prática hoje')
+const practiceText = computed(() => stats.value.streakDays > 0 ? 'O Camaleão está acompanhando sua evolução. Continue conversando para manter a ofensiva.' : 'Escolha um idioma e converse com o Camaleão para iniciar sua sequência.')
+onMounted(async () => {
+  try { stats.value = (await profileApi()).stats || stats.value } catch {}
+})
 </script>
 
 <style scoped>
@@ -205,6 +226,43 @@ defineEmits(['selectLanguage', 'openSidebar', 'navigate'])
   width: 100%;
   max-width: 400px;
   margin-bottom: 48px; /* increased section spacing */
+}
+
+.practice-card {
+  width: 100%;
+  max-width: 400px;
+  background: #ffffff;
+  color: #1a235c;
+  border: 1px solid #dbeafe;
+  border-radius: 28px;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 14px 30px rgba(28, 91, 240, .08);
+  animation: slideUpFade 1.1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.practice-card img {
+  width: 76px;
+  height: 76px;
+  object-fit: cover;
+  border-radius: 50%;
+  background: #e0f2fe;
+  animation: floatMascot 2.4s ease-in-out infinite;
+}
+
+.practice-card strong {
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.practice-card p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  opacity: .92;
+  color: #64748b;
 }
 
 .lang-card {

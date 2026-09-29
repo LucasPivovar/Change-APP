@@ -15,11 +15,9 @@
         
         <!-- Profile Section -->
         <div class="profile-section">
-          <img src="https://i.pravatar.cc/150?img=11" alt="Profile" class="profile-avatar" />
-          <div class="profile-info">
-            <span class="profile-name">João Silva</span>
-            <span class="view-profile" @click="handleNav('profile')">Ver perfil</span>
-          </div>
+          <img :src="avatar" alt="Profile" class="profile-avatar" />
+          <span class="profile-name">{{ user?.name || 'Perfil' }}</span>
+          <span class="profile-username" v-if="user?.username">@{{ user.username }}</span>
         </div>
 
         <!-- Navigation Links -->
@@ -32,6 +30,16 @@
           <div class="nav-item" @click="handleNav('conversations')">
             <MessageCircleIcon size="22" class="nav-icon" />
             <span>{{ t('nav_chats') }}</span>
+          </div>
+
+          <div class="nav-item" @click="handleNav('friends')">
+            <UsersIcon size="22" class="nav-icon" />
+            <span>Amigos</span>
+          </div>
+
+          <div class="nav-item" @click="handleNav('profile')">
+            <UserIcon size="22" class="nav-icon" />
+            <span>Perfil</span>
           </div>
           
           <!-- Language Selector -->
@@ -74,12 +82,15 @@ import { ref, computed } from 'vue'
 import { 
   Home as HomeIcon,
   MessageCircle as MessageCircleIcon,
+  Users as UsersIcon,
+  User as UserIcon,
   Globe as GlobeIcon,
   LogOut as LogOutIcon,
   ChevronDown as ChevronDownIcon,
   Check as CheckIcon
 } from '@lucide/vue'
 import { t, currentLocale, setLocale } from '../data/translations.js'
+import { currentUser } from '../services/chatApi'
 
 defineProps({
   isOpen: {
@@ -89,6 +100,8 @@ defineProps({
 })
 
 const emit = defineEmits(['close', 'navigate'])
+const user = currentUser()
+const avatar = user?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Perfil')}&background=e0f2fe&color=1c5bf0`
 
 const currentLanguageLabel = computed(() => {
   if (currentLocale.value === 'en') return 'English'
@@ -166,25 +179,22 @@ const handleNav = (route) => {
 
 .profile-section {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 40px;
-  padding-bottom: 24px;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 32px;
+  padding: 8px 0 24px;
+  text-align: center;
   border-bottom: 1px solid #f1f5f9;
 }
 
 .profile-avatar {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid #e0e7ff;
-}
-
-.profile-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 
 .profile-name {
@@ -193,11 +203,10 @@ const handleNav = (route) => {
   color: #1a235c;
 }
 
-.view-profile {
-  font-size: 13px;
-  color: #1c5bf0;
-  font-weight: 600;
-  cursor: pointer;
+.profile-username {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 700;
 }
 
 .nav-links {

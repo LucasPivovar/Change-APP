@@ -12,6 +12,15 @@ dist
 dist-ssr
 *.local
 
+# Local credentials and chat history
+.env
+.env.*
+!.env.example
+backend/data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

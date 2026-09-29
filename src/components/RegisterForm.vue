@@ -8,6 +8,11 @@
       </div>
 
       <div class="input-group">
+        <AtSignIcon class="input-icon" size="20" />
+        <input type="text" placeholder="@nomeusuario" v-model="username" required minlength="3" maxlength="24" />
+      </div>
+
+      <div class="input-group">
         <MailIcon class="input-icon" size="20" />
         <input type="email" placeholder="Email" v-model="email" required />
       </div>
@@ -22,6 +27,7 @@
       </div>
 
       <button type="submit" class="btn-primary">{{ t('create_account') }}</button>
+      <p v-if="error" class="form-error" role="alert">{{ error }}</p>
 
       <div class="register-link">
         {{ t('already_have_account') }} <a href="#" @click.prevent="$emit('goToLogin')">{{ t('login_btn') }}</a>
@@ -32,18 +38,28 @@
 
 <script setup>
 import { ref } from 'vue'
-import { User as UserIcon, Lock as LockIcon, Eye as EyeIcon, EyeOff as EyeOffIcon, Mail as MailIcon } from '@lucide/vue'
+import { User as UserIcon, Lock as LockIcon, Eye as EyeIcon, EyeOff as EyeOffIcon, Mail as MailIcon, AtSign as AtSignIcon } from '@lucide/vue'
 import { t } from '../data/translations.js'
+import { authApi } from '../services/chatApi'
 
-defineEmits(['goToLogin'])
+const emit = defineEmits(['goToLogin', 'registerSuccess'])
 
 const name = ref('')
+const username = ref('')
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
+const error = ref('')
 
-const handleRegister = () => {
-  console.log('Register attempted:', email.value)
+const handleRegister = async () => {
+  error.value = ''
+  try {
+    const cleanUsername = username.value.replace(/^@+/, '').trim().toLowerCase()
+    const user = await authApi('/auth/register', { name: name.value, username: cleanUsername, email: email.value, password: password.value })
+    emit('registerSuccess', user)
+  } catch (e) {
+    error.value = e.message
+  }
 }
 </script>
 
@@ -132,6 +148,17 @@ const handleRegister = () => {
 .register-link a {
   color: var(--primary-blue);
   text-decoration: none;
+  font-weight: 600;
+}
+
+.form-error {
+  margin: 0;
+  color: #be123c;
+  background: #fff1f2;
+  border: 1px solid #ffe4e6;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
   font-weight: 600;
 }
 </style>

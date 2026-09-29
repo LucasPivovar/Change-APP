@@ -12,10 +12,11 @@
       <!-- Profile Header -->
       <div class="profile-header">
         <div class="avatar-wrapper">
-          <img src="https://i.pravatar.cc/150?img=11" class="profile-avatar" />
-          <button class="edit-avatar-btn">
+          <img :src="profileAvatar" class="profile-avatar" />
+          <button class="edit-avatar-btn" @click="avatarInputRef?.click()">
             <CameraIcon size="16" />
           </button>
+          <input ref="avatarInputRef" type="file" accept="image/*" class="avatar-input" @change="changeAvatar" />
         </div>
         <div class="name-container">
           <h1 class="profile-name" v-if="!isEditingName">{{ profileName }}</h1>
@@ -33,6 +34,14 @@
             <CheckIcon v-else size="16" />
           </button>
         </div>
+        <div class="username-row">
+          <span v-if="!isEditingUsername" class="profile-username">@{{ user?.username || 'usuario' }}</span>
+          <input v-else v-model="newUsername" class="username-input" @keyup.enter="saveUsername" @blur="saveUsername" />
+          <button class="edit-username-btn" @click="toggleEditUsername">
+            <PencilIcon v-if="!isEditingUsername" size="13" />
+            <CheckIcon v-else size="13" />
+          </button>
+        </div>
       </div>
 
       <!-- Stats Grid -->
@@ -42,7 +51,7 @@
             <StreakFlame size="28" />
           </div>
           <div class="stat-info">
-            <span class="stat-value">5 {{ t('streak_label') }}</span>
+            <span class="stat-value">{{ stats.streakDays }} {{ t('streak_label') }}</span>
             <span class="stat-label">{{ t('streak_sub') }}</span>
           </div>
         </div>
@@ -52,7 +61,7 @@
             <UsersIcon size="24" class="stat-icon" />
           </div>
           <div class="stat-info">
-            <span class="stat-value">7</span>
+            <span class="stat-value">{{ stats.friends }}</span>
             <span class="stat-label">{{ t('friends_label') }}</span>
           </div>
         </div>
@@ -62,7 +71,7 @@
             <ClockIcon size="24" class="stat-icon" />
           </div>
           <div class="stat-info">
-            <span class="stat-value">4h 30m</span>
+            <span class="stat-value">{{ practicedTimeLabel }}</span>
             <span class="stat-label">{{ t('time_practiced') }}</span>
           </div>
         </div>
@@ -101,12 +110,12 @@
                   v-for="lang in languages" 
                   :key="lang.code" 
                   class="custom-dropdown-item" 
-                  :class="{ 'active': currentLocale === lang.code }"
+                  :class="{ 'active': user?.defaultLanguage === lang.code }"
                   @click="selectLanguage(lang.code)"
                 >
                   <img :src="lang.flag" class="lang-flag" />
                   <span class="lang-name">{{ lang.label }}</span>
-                  <CheckIcon v-if="currentLocale === lang.code" size="18" class="check-icon" />
+                  <CheckIcon v-if="user?.defaultLanguage === lang.code" size="18" class="check-icon" />
                 </div>
               </div>
             </transition>
@@ -133,10 +142,11 @@
             
             <div class="friends-list">
               <div class="friend-item" v-for="friend in friends" :key="friend.id">
-                <img :src="friend.avatar" class="friend-avatar" />
+                <img :src="friend.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(friend.name)}&background=e0f2fe&color=1c5bf0`" class="friend-avatar" />
                 <div class="friend-info-row">
                   <span class="friend-name">{{ friend.name }}</span>
-                  <span class="friend-streak" style="display: inline-flex; align-items: center; gap: 4px;"><StreakFlame size="14" /> {{ friend.streak }} {{ t('streak_label').split(' ')[0] }}</span>
+                  <span class="friend-streak" style="display: inline-flex; align-items: center; gap: 4px;"><StreakFlame size="14" /> {{ friend.streakDays || 0 }}d</span>
+                  <span class="friend-username">@{{ friend.username }}</span>
                 </div>
                 <button class="view-profile-btn" @click="showFriendProfile(friend)">
                   Ver Perfil
@@ -161,7 +171,7 @@
             
             <div class="profile-modal-content">
               <div class="profile-avatar-container">
-                <img :src="selectedFriend?.avatar" class="modal-profile-avatar" />
+                <img :src="selectedFriend?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedFriend?.name || 'Amigo')}&background=e0f2fe&color=1c5bf0`" class="modal-profile-avatar" />
               </div>
               
               <h2 class="modal-profile-name">{{ selectedFriend?.name }}</h2>
@@ -170,18 +180,18 @@
                 <div class="friend-stat-banner streak-banner">
                   <span class="fire-emoji" style="display: inline-flex;"><StreakFlame size="28" /></span>
                   <div class="banner-info">
-                    <strong>{{ selectedFriend?.streak }} {{ t('streak_label').split(' ')[0] }}</strong>
+                    <strong>{{ selectedFriend?.streakDays || 0 }} dias</strong>
                     <span>Vocês estão em sequência!</span>
                   </div>
                 </div>
                 
                 <div class="friend-stat-banner lang-banner">
                   <span class="lang-emoji" style="display: inline-flex;">
-                    <CountryFlagMap :language="selectedFriend?.language" size="32" />
+                    <CountryFlagMap language="en" size="32" />
                   </span>
                   <div class="banner-info">
-                    <strong>Praticando {{ selectedFriend?.language }}</strong>
-                    <span>Idioma em foco</span>
+                    <strong>@{{ selectedFriend?.username }}</strong>
+                    <span>Nome de usuário</span>
                   </div>
                 </div>
               </div>
@@ -337,6 +347,10 @@
         <MessageCircleIcon size="28" />
         <span>{{ t('nav_chats') }}</span>
       </div>
+      <div class="nav-item" @click="$emit('navigate', 'friends')">
+        <UsersIcon size="28" />
+        <span>Amigos</span>
+      </div>
       <div class="nav-item active" @click="$emit('navigate', 'profile')">
         <UserIcon size="28" />
         <span>{{ t('nav_profile') }}</span>
@@ -346,7 +360,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick, computed } from 'vue'
+import { ref, nextTick, computed, onMounted } from 'vue'
 import { 
   Menu as MenuIcon, 
   CameraIcon, 
@@ -364,15 +378,16 @@ import {
   Lock as LockIcon,
   Mail as MailIcon,
   Globe as GlobeIcon,
-  FileText as FileTextIcon
 } from '@lucide/vue'
-import { t, currentLocale, setLocale } from '../data/translations.js'
+import { t } from '../data/translations.js'
 import StreakFlame from './StreakFlame.vue'
 import CountryFlagMap from './CountryFlagMap.vue'
+import { currentUser, friendsApi, profileApi } from '../services/chatApi'
 
 const emit = defineEmits(['goBack', 'navigate', 'openSidebar'])
 
 const isEditingName = ref(false)
+const isEditingUsername = ref(false)
 const isLangDropdownOpen = ref(false)
 const languages = [
   { code: 'pt', label: 'Português Brasil', flag: 'https://flagcdn.com/w20/br.png' },
@@ -386,12 +401,44 @@ const toggleLangDropdown = () => {
 }
 
 const selectLanguage = (code) => {
-  setLocale(code)
+  saveProfile({ defaultLanguage: code })
   isLangDropdownOpen.value = false
 }
-const profileName = ref('João Silva')
-const newName = ref('João Silva')
+const user = ref(currentUser())
+const profileName = ref(user.value?.name || 'Seu nome')
+const newName = ref(profileName.value)
+const newUsername = ref(user.value?.username || '')
 const nameInputRef = ref(null)
+const avatarInputRef = ref(null)
+const stats = ref({ streakDays: 0, friends: 0, practicedSeconds: 0, messageCount: 0 })
+const profileAvatar = computed(() => user.value?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(profileName.value)}&background=e0f2fe&color=1c5bf0`)
+const practicedTimeLabel = computed(() => {
+  const minutes = Math.floor((stats.value.practicedSeconds || 0) / 60)
+  const hours = Math.floor(minutes / 60)
+  const rest = minutes % 60
+  if (hours > 0) return `${hours}h ${rest}m`
+  return `${rest}m`
+})
+
+const loadProfile = async () => {
+  try {
+    const data = await profileApi()
+    user.value = data.user
+    profileName.value = data.user.name
+    newName.value = data.user.name
+    newUsername.value = data.user.username || ''
+    stats.value = data.stats
+  } catch {}
+}
+
+const saveProfile = async (payload) => {
+  const data = await profileApi({ method: 'PATCH', body: payload })
+  user.value = data.user
+  profileName.value = data.user.name
+  newName.value = data.user.name
+  newUsername.value = data.user.username || ''
+  stats.value = data.stats
+}
 
 const toggleEditName = () => {
   if (isEditingName.value) {
@@ -409,9 +456,40 @@ const toggleEditName = () => {
 
 const saveName = () => {
   if (newName.value.trim() !== '') {
-    profileName.value = newName.value
+    saveProfile({ name: newName.value.trim() }).catch(() => {
+      profileName.value = user.value?.name || profileName.value
+    })
   }
   isEditingName.value = false
+}
+
+const toggleEditUsername = () => {
+  if (isEditingUsername.value) {
+    saveUsername()
+  } else {
+    newUsername.value = user.value?.username || ''
+    isEditingUsername.value = true
+  }
+}
+
+const saveUsername = () => {
+  const value = newUsername.value.replace(/^@+/, '').trim().toLowerCase()
+  if (value.length >= 3) {
+    saveProfile({ username: value }).catch((error) => {
+      alert(error.message || 'Não foi possível trocar o nome de usuário.')
+      newUsername.value = user.value?.username || ''
+    })
+  }
+  isEditingUsername.value = false
+}
+
+const changeAvatar = async (event) => {
+  const file = event.target.files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => saveProfile({ avatarUrl: reader.result }).catch(() => {})
+  reader.readAsDataURL(file)
+  event.target.value = ''
 }
 
 // Friends List logic
@@ -419,18 +497,11 @@ const isFriendsModalOpen = ref(false)
 const isFriendProfileOpen = ref(false)
 const selectedFriend = ref(null)
 
-const friends = ref([
-  { id: 1, name: 'David Smith', avatar: 'https://i.pravatar.cc/150?img=12', streak: 7, language: 'Inglês' },
-  { id: 2, name: 'Ana Souza', avatar: 'https://i.pravatar.cc/150?img=47', streak: 3, language: 'Espanhol' },
-  { id: 3, name: 'Carlos', avatar: 'https://i.pravatar.cc/150?img=11', streak: 5, language: 'Inglês' },
-  { id: 4, name: 'Lucas', avatar: 'https://i.pravatar.cc/150?img=33', streak: 5, language: 'Francês' },
-  { id: 5, name: 'Marcos', avatar: 'https://i.pravatar.cc/8', streak: 12, language: 'Inglês' },
-  { id: 6, name: 'Sofia', avatar: 'https://i.pravatar.cc/9', streak: 8, language: 'Espanhol' },
-  { id: 7, name: 'Julia', avatar: 'https://i.pravatar.cc/5', streak: 4, language: 'Português' }
-])
+const friends = ref([])
 
-const openFriendsModal = () => {
+const openFriendsModal = async () => {
   isFriendsModalOpen.value = true
+  try { friends.value = (await friendsApi()).items || [] } catch {}
 }
 
 const showFriendProfile = (friend) => {
@@ -441,7 +512,7 @@ const showFriendProfile = (friend) => {
 const goToChatFromProfile = () => {
   isFriendProfileOpen.value = false
   isFriendsModalOpen.value = false
-  emit('navigate', 'conversations')
+  emit('navigate', 'friends')
 }
 
 const unfriendAction = () => {
@@ -542,11 +613,14 @@ const changeLang = (event) => {
 }
 
 const currentLanguageLabel = computed(() => {
-  if (currentLocale.value === 'en') return 'English'
-  if (currentLocale.value === 'fr') return 'Français'
-  if (currentLocale.value === 'es') return 'Español'
+  const code = user.value?.defaultLanguage || 'pt'
+  if (code === 'en') return 'English'
+  if (code === 'fr') return 'Français'
+  if (code === 'es') return 'Español'
   return 'Português Brasil'
 })
+
+onMounted(loadProfile)
 </script>
 
 <style scoped>
@@ -674,6 +748,10 @@ const currentLanguageLabel = computed(() => {
   cursor: pointer;
 }
 
+.avatar-input {
+  display: none;
+}
+
 .name-container {
   display: flex;
   align-items: center;
@@ -686,6 +764,43 @@ const currentLanguageLabel = computed(() => {
   font-size: 22px;
   font-weight: 800;
   color: #1e293b;
+}
+
+.username-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.profile-username {
+  color: #64748b;
+  font-weight: 750;
+  font-size: 14px;
+}
+
+.username-input {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  outline: none;
+  width: 160px;
+}
+
+.edit-username-btn {
+  background: #f1f5f9;
+  border: none;
+  color: #64748b;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
 .name-input {
@@ -723,6 +838,7 @@ const currentLanguageLabel = computed(() => {
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
+
 
 .stat-card {
   background: white;

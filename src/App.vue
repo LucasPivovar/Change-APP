@@ -15,10 +15,31 @@ import SidebarMenu from './components/SidebarMenu.vue'
 import ConversationsView from './components/ConversationsView.vue'
 import ProfileView from './components/ProfileView.vue'
 import TermsView from './components/TermsView.vue'
+import FriendsView from './components/FriendsView.vue'
+import FriendChatView from './components/FriendChatView.vue'
+import { currentUser, logout } from './services/chatApi'
 
-const currentForm = ref('login')
+const currentForm = ref(currentUser() ? 'home' : 'login')
 const selectedLanguage = ref(null)
+const selectedCourse = ref(null)
 const isSidebarOpen = ref(false)
+const activeAiChatId = ref(null)
+const activeFriendConversationId = ref(null)
+const openAiChat = (id) => {
+  if (!id) {
+    activeAiChatId.value = null
+    selectedLanguage.value = null
+    selectedCourse.value = null
+    currentForm.value = 'home'
+    return
+  }
+  activeAiChatId.value = id
+  currentForm.value = 'mascot-chat'
+}
+const openFriendChat = (id) => {
+  activeFriendConversationId.value = id
+  currentForm.value = 'friend-chat'
+}
 
 const handleLanguageSelect = (lang) => {
   selectedLanguage.value = lang
@@ -26,23 +47,29 @@ const handleLanguageSelect = (lang) => {
 }
 
 const handleCourseSelect = (course) => {
+  selectedCourse.value = course
   currentForm.value = 'course-mode'
 }
 
 const handleModeSelect = (mode) => {
   if (mode === 'solo') {
-    currentForm.value = 'chat'
+    currentForm.value = 'friends'
   } else if (mode === 'group') {
     currentForm.value = 'group-chat'
   } else if (mode === 'mascot') {
+    activeAiChatId.value = null
+    activeFriendConversationId.value = null
     currentForm.value = 'mascot-chat'
   }
 }
 
 const handleNavigation = (route) => {
   if (route === 'login') {
+    logout()
     currentForm.value = 'login'
     selectedLanguage.value = null
+    selectedCourse.value = null
+    activeAiChatId.value = null
   } else if (route === 'language') {
     // Show a basic alert or placeholder since full language switching requires i18n
     alert('Seletor de idioma em breve!')
@@ -54,7 +81,7 @@ const handleNavigation = (route) => {
 const lastForm = ref('home')
 
 watch(currentForm, (newVal) => {
-  const chatViews = ['chat', 'saved-chat', 'group-chat', 'mascot-chat', 'terms']
+  const chatViews = ['chat', 'saved-chat', 'group-chat', 'mascot-chat', 'friend-chat']
   if (!chatViews.includes(newVal)) {
     lastForm.value = newVal
   }
@@ -86,6 +113,7 @@ const handleGoBack = () => {
       <RegisterForm 
         v-else-if="currentForm === 'register'" 
         @goToLogin="currentForm = 'login'" 
+        @registerSuccess="currentForm = 'home'"
       />
       <ForgotPasswordForm 
         v-else-if="currentForm === 'forgot'" 
@@ -139,9 +167,13 @@ const handleGoBack = () => {
 
   <transition name="fade">
     <MascotChatView 
-      v-if="currentForm === 'mascot-chat'" 
+      v-if="currentForm === 'mascot-chat'"
+      :chatId="activeAiChatId"
+      :language="selectedLanguage || 'en'"
+      :courseId="selectedCourse || 'general'"
+      @created="activeAiChatId = $event"
+      @history="currentForm = 'conversations'"
       @goBack="handleGoBack"
-      @newPartner="currentForm = 'course-mode'"
     />
   </transition>
 
@@ -150,7 +182,26 @@ const handleGoBack = () => {
       v-if="currentForm === 'conversations'"
       @openSidebar="isSidebarOpen = true"
       @openChat="currentForm = 'saved-chat'"
+      @openAiChat="openAiChat"
+      @openFriendChat="openFriendChat"
       @navigate="handleNavigation"
+    />
+  </transition>
+
+  <transition name="fade">
+    <FriendsView
+      v-if="currentForm === 'friends'"
+      @openSidebar="isSidebarOpen = true"
+      @navigate="handleNavigation"
+      @openFriendChat="openFriendChat"
+    />
+  </transition>
+
+  <transition name="fade">
+    <FriendChatView
+      v-if="currentForm === 'friend-chat'"
+      :conversationId="activeFriendConversationId"
+      @goBack="currentForm = 'friends'"
     />
   </transition>
 
@@ -168,6 +219,7 @@ const handleGoBack = () => {
       v-if="currentForm === 'terms'"
       @goBack="handleGoBack"
       @openSidebar="isSidebarOpen = true"
+      @navigate="handleNavigation"
     />
   </transition>
 </template>

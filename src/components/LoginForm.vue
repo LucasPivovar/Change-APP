@@ -20,6 +20,7 @@
       </div>
 
       <button type="submit" class="btn-primary">{{ t('login_btn') }}</button>
+      <p v-if="error" class="form-error" role="alert">{{ error }}</p>
 
       <div class="register-link">
         {{ t('dont_have_account') }} <a href="#" @click.prevent="$emit('goToRegister')">{{ t('register_now') }}</a>
@@ -32,16 +33,23 @@
 import { ref } from 'vue'
 import { User as UserIcon, Lock as LockIcon, Eye as EyeIcon, EyeOff as EyeOffIcon } from '@lucide/vue'
 import { t } from '../data/translations.js'
+import { authApi } from '../services/chatApi'
 
 const emit = defineEmits(['goToRegister', 'goToForgot', 'loginSuccess'])
 
 const username = ref('')
 const password = ref('')
 const showPassword = ref(false)
+const error = ref('')
 
-const handleLogin = () => {
-  console.log('Login attempted:', username.value)
-  emit('loginSuccess')
+const handleLogin = async () => {
+  error.value = ''
+  try {
+    const user = await authApi('/auth/login', { email: username.value, password: password.value })
+    emit('loginSuccess', user)
+  } catch (e) {
+    error.value = e.message
+  }
 }
 </script>
 
@@ -140,6 +148,17 @@ const handleLogin = () => {
 .register-link a {
   color: var(--primary-blue);
   text-decoration: none;
+  font-weight: 600;
+}
+
+.form-error {
+  margin: 0;
+  color: #be123c;
+  background: #fff1f2;
+  border: 1px solid #ffe4e6;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
   font-weight: 600;
 }
 </style>

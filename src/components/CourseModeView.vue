@@ -11,8 +11,8 @@
         <div class="mode-content">
           <div class="mascot-header-row">
             <div class="text-col">
-              <h2>{{ t('how_to_practice') }}</h2>
-              <p class="subtitle-text">{{ t('practice_desc') }}</p>
+              <h2>Pratique com o Camaleão</h2>
+              <p class="subtitle-text">Converse com o Camaleão IA para praticar o idioma escolhido.</p>
             </div>
             <div class="img-col">
               <img src="../assets/camaleao.png" class="peeking-mascot" />
@@ -20,18 +20,6 @@
           </div>
           
           <div class="options-list">
-            <div class="option-card solo-card" @click="selectMode('solo')">
-              <div class="icon-wrapper solo-icon-wrapper">
-                <UsersIcon size="32" class="main-icon" />
-                <MessageCircleIcon size="16" class="badge-icon badge-solo" />
-              </div>
-              <div class="option-text">
-                <h3>{{ t('solo_title') }}</h3>
-                <p>{{ t('solo_desc') }}</p>
-              </div>
-              <ChevronRightIcon class="arrow-icon" size="24" stroke-width="2.5" />
-            </div>
-
             <div class="option-card mascot-card" @click="selectMode('mascot')">
               <div class="icon-wrapper mascot-icon-wrapper" style="overflow: hidden; padding: 0;">
                 <img src="../assets/2.png" style="width: 100%; height: 100%; object-fit: cover;" class="main-icon" />
@@ -56,7 +44,7 @@
 </template>
 
 <script setup>
-import { X as XIcon, Users as UsersIcon, MessageCircle as MessageCircleIcon, Bot as BotIcon, ChevronRight as ChevronRightIcon } from '@lucide/vue'
+import { X as XIcon, ChevronRight as ChevronRightIcon } from '@lucide/vue'
 import { t } from '../data/translations.js'
 
 const emit = defineEmits(['goBack', 'selectMode'])

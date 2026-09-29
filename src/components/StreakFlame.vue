@@ -1,125 +1,43 @@
 <template>
   <span class="flame-container" :style="{ width: size + 'px', height: size + 'px' }">
-    <svg 
-      class="streak-flame" 
-      viewBox="0 0 24 24" 
-      xmlns="http://www.w3.org/2000/svg"
-      :style="{ width: size + 'px', height: size + 'px' }"
-    >
+    <svg class="streak-flame" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" :style="{ width: size + 'px', height: size + 'px' }">
       <defs>
-        <linearGradient :id="'flame-grad-' + id" x1="0%" y1="100%" x2="0%" y2="0%">
-          <stop offset="0%" stop-color="#EA580C" />
-          <stop offset="50%" stop-color="#F97316" />
-          <stop offset="100%" stop-color="#FBBF24" />
+        <linearGradient :id="'outer-' + id" x1="0" x2="0" y1="64" y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#ef4444" />
+          <stop offset="0.55" stop-color="#f97316" />
+          <stop offset="1" stop-color="#facc15" />
         </linearGradient>
-        <linearGradient :id="'flame-inner-grad-' + id" x1="0%" y1="100%" x2="0%" y2="0%">
-          <stop offset="0%" stop-color="#F97316" />
-          <stop offset="70%" stop-color="#FBBF24" />
-          <stop offset="100%" stop-color="#FEF08A" />
+        <linearGradient :id="'inner-' + id" x1="0" x2="0" y1="58" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#ffffff" />
+          <stop offset="0.45" stop-color="#fde68a" />
+          <stop offset="1" stop-color="#fb923c" />
         </linearGradient>
-        <filter :id="'flame-glow-' + id" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="1" result="blur" />
-          <feComposite in="SourceGraphic" in2="blur" operator="over" />
-        </filter>
       </defs>
-      
-      <!-- Outer Flame Glow -->
-      <path 
-        class="flame-layer flame-outer" 
-        :fill="'url(#flame-grad-' + id + ')'" 
-        :filter="'url(#flame-glow-' + id + ')'"
-        d="M17.65,10c-1.46-4.52-5.65-7.7-5.65-7.7s-1,1.05-1,2.54a6.45,6.45,0,0,0,3,5.43c1.7,1.07,2.15,3,1.4,4.86a4.29,4.29,0,0,1-4.14,2.83,4.45,4.45,0,0,1-4.45-4.45c0-2.42,1.38-4.52,3.4-5.59C7.81,9.08,6,12.33,6,16a6,6,0,0,0,12,0C18,13.8,17.85,11.9,17.65,10Z"
-      />
-      
-      <!-- Inner Flame -->
-      <path 
-        class="flame-layer flame-inner" 
-        :fill="'url(#flame-inner-grad-' + id + ')'"
-        d="M15.5,12.5c-.7-2-2.7-3.5-2.7-3.5s-.5.5-.5,1.2a3,3,0,0,0,1.4,2.5c.8.5,1,1.4.7,2.2a2,2,0,0,1-1.9,1.3,2,2,0,0,1-2-2c0-1.1.6-2,1.5-2.5c-1.6.4-2.5,1.9-2.5,3.6a2.7,2.7,0,0,0,5.4,0C15.6,14.3,15.6,13.4,15.5,12.5Z"
-        transform="scale(0.85) translate(2, 2.5)"
-      />
-      
-      <!-- Center Bright Core -->
-      <path 
-        class="flame-layer flame-core" 
-        fill="#FFFFFF"
-        opacity="0.85"
-        d="M12,13.5c-.2-.6-.8-1-.8-1s-.2.1-.2.4a1,1,0,0,0,.4.8c.2.2.3.4.2.7a.6.6,0,0,1-.6.4.6.6,0,0,1-.6-.6c0-.3.2-.6.5-.8c-.5.1-.8.6-.8,1.1a.9.9,0,0,0,1.8,0C12,14.1,12,13.8,12,13.5Z"
-        transform="scale(0.7) translate(5, 7.5)"
-      />
+      <path class="flame-tip flame-tip-left" :fill="'url(#outer-' + id + ')'" d="M22 31C18 24 22 16 29 10C27 20 34 22 35 31C36 39 30 45 24 45C18 45 15 39 17 34C18 36 20 36 22 31Z" opacity="0.9" />
+      <path class="flame-tip flame-tip-right" :fill="'url(#outer-' + id + ')'" d="M39 32C44 25 41 17 34 7C35 20 27 24 27 36C27 46 35 53 43 49C50 46 51 37 47 31C45 36 42 37 39 32Z" opacity="0.95" />
+      <path class="flame-body" :fill="'url(#outer-' + id + ')'" d="M32 4C20 16 15 27 16 38C17 51 26 60 37 59C49 58 56 47 52 35C49 25 40 20 38 10C35 17 29 21 28 30C27 37 33 40 29 47C23 41 24 33 32 4Z" />
+      <path class="flame-inner" :fill="'url(#inner-' + id + ')'" d="M33 28C26 36 24 43 27 50C30 57 41 57 44 49C47 42 42 37 39 32C39 39 35 40 34 45C31 41 31 36 33 28Z" />
     </svg>
   </span>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-
-defineProps({
-  size: {
-    type: [Number, String],
-    default: 20
-  }
-})
-
+defineProps({ size: { type: [Number, String], default: 20 } })
 const id = ref(Math.random().toString(36).substring(2, 9))
 </script>
 
 <style scoped>
-.flame-container {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  vertical-align: middle;
-  line-height: 0;
-}
-
-.streak-flame {
-  transform-origin: center bottom;
-  filter: drop-shadow(0 2px 6px rgba(234, 88, 12, 0.25));
-}
-
-.flame-layer {
-  transform-origin: center bottom;
-}
-
-.flame-outer {
-  animation: outer-flicker 1.8s ease-in-out infinite alternate;
-}
-
-.flame-inner {
-  animation: inner-flicker 1.2s ease-in-out infinite alternate-reverse;
-}
-
-.flame-core {
-  animation: core-flicker 0.8s ease-in-out infinite alternate;
-}
-
-@keyframes outer-flicker {
-  0% {
-    transform: scale(0.95) rotate(-2deg);
-  }
-  100% {
-    transform: scale(1.05) rotate(2deg);
-  }
-}
-
-@keyframes inner-flicker {
-  0% {
-    transform: scale(0.85) translate(2px, 2.5px) rotate(3deg);
-  }
-  100% {
-    transform: scale(0.95) translate(2px, 2.5px) rotate(-3deg);
-  }
-}
-
-@keyframes core-flicker {
-  0% {
-    transform: scale(0.7) translate(5px, 7.5px) scaleY(0.9);
-    opacity: 0.7;
-  }
-  100% {
-    transform: scale(0.7) translate(5px, 7.5px) scaleY(1.1);
-    opacity: 0.95;
-  }
-}
+.flame-container { display:inline-flex; align-items:center; justify-content:center; vertical-align:middle; line-height:0; }
+.streak-flame { transform-origin:center bottom; filter: drop-shadow(0 3px 8px rgba(249, 115, 22, .28)); animation: flame-sway 1.8s ease-in-out infinite; overflow: visible; }
+.flame-body { transform-origin:center bottom; animation: body-breathe 1.5s ease-in-out infinite; }
+.flame-inner { transform-origin:center bottom; animation: inner-dance 1s ease-in-out infinite; }
+.flame-tip { transform-origin:center bottom; }
+.flame-tip-left { animation: tip-left 1.15s ease-in-out infinite; }
+.flame-tip-right { animation: tip-right 1.3s ease-in-out infinite reverse; }
+@keyframes flame-sway { 0%,100% { transform: rotate(-1deg); } 50% { transform: rotate(1deg); } }
+@keyframes body-breathe { 0%,100% { transform: scaleY(.98) scaleX(1); } 50% { transform: scaleY(1.04) scaleX(.98); } }
+@keyframes inner-dance { 0%,100% { transform: translateY(1px) scale(.96); opacity:.86; } 50% { transform: translateY(-2px) scale(1.04); opacity:1; } }
+@keyframes tip-left { 0%,100% { transform: translateY(1px) rotate(-2deg) scale(.97); } 50% { transform: translateY(-4px) rotate(3deg) scale(1.05); } }
+@keyframes tip-right { 0%,100% { transform: translateY(0) rotate(2deg) scale(.98); } 50% { transform: translateY(-5px) rotate(-3deg) scale(1.06); } }
 </style>

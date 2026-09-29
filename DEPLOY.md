@@ -1,0 +1,49 @@
+# Deploy do Change APP
+
+## Frontend na Vercel
+
+1. Suba este repositório no GitHub.
+2. Na Vercel, importe o repositório.
+3. Use as configurações padrão:
+   - Framework: Vite
+   - Build command: `npm run build`
+   - Output directory: `dist`
+4. Se a API estiver em outro domínio, crie a variável de ambiente:
+
+```env
+VITE_API_URL=https://sua-api.com/api
+```
+
+Se você não definir `VITE_API_URL`, o frontend vai tentar chamar `/api` no mesmo domínio.
+
+## Backend NestJS
+
+O backend está na pasta `backend/`. Ele precisa rodar em um ambiente Node com disco persistente para manter o SQLite.
+
+Comandos:
+
+```bash
+cd backend
+npm install
+cp .env.example .env
+npm run build
+npm run start
+```
+
+Variáveis principais do backend:
+
+```env
+PORT=3001
+HOST=0.0.0.0
+CORS_ORIGIN=https://seu-site.vercel.app
+DATABASE_PATH=./data/chat.sqlite
+AI_PROVIDER=groq
+GROQ_API_KEY=sua-chave
+GROQ_MODEL=openai/gpt-oss-20b
+```
+
+Para o frontend da Vercel conversar com a API, o valor de `CORS_ORIGIN` no backend precisa ser a URL do site na Vercel, e `VITE_API_URL` na Vercel precisa apontar para a URL pública da API.
+
+## Observação importante
+
+A Vercel hospeda muito bem o frontend estático deste projeto. O backend atual usa NestJS com SQLite local, então ele precisa de um servidor Node com armazenamento persistente, como VPS/Hostinger VPS/Render/Railway/Fly.io. Não coloque chaves de API no frontend.
