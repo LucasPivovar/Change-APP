@@ -8,8 +8,13 @@
         <span class="waiting-time">{{ queueTime }}</span>
       </div>
       <main class="waiting-content">
-        <div class="arrow-loader" aria-label="Procurando aluno">
-          <RefreshCwIcon size="76" :stroke-width="2.3" />
+        <div class="segment-loader" aria-label="Procurando aluno">
+          <span class="seg seg-1"></span>
+          <span class="seg seg-2"></span>
+          <span class="seg seg-3"></span>
+          <span class="seg seg-4"></span>
+          <span class="seg seg-5"></span>
+          <span class="seg seg-6"></span>
         </div>
         <div class="waiting-copy">
           <h1>Encontrando alguém para praticar com você</h1>
@@ -69,7 +74,7 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { ChevronLeftIcon, RefreshCwIcon, SendIcon } from '@lucide/vue'
+import { ChevronLeftIcon, SendIcon } from '@lucide/vue'
 import { audienceForCourse } from '../data/practiceScenarios.js'
 import { currentUser, friendsApi, getSessionToken, wsUrl } from '../services/chatApi.js'
 
@@ -195,8 +200,14 @@ onBeforeUnmount(() => { clearInterval(timer); ws?.close() })
 .white-logo { color:#fff; font-weight:950; letter-spacing:.01em; font-size:21px; text-shadow:0 8px 24px rgba(0,0,0,.12); }
 .waiting-time { color:#eef4ff; font-weight:900; border:1px solid rgba(255,255,255,.28); background:rgba(255,255,255,.1); border-radius:999px; padding:6px 13px; backdrop-filter:blur(10px); }
 .waiting-content { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:26px 30px 34px; gap:30px; }
-.arrow-loader { width:142px; height:142px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; animation:spin 1.05s linear infinite; filter:drop-shadow(0 22px 50px rgba(0,20,90,.22)); }
-.arrow-loader::before { content:""; position:absolute; width:116px; height:116px; border-radius:50%; border:2px solid rgba(255,255,255,.24); border-left-color:rgba(255,255,255,.78); }
+.segment-loader { width:148px; height:148px; position:relative; animation:spin 1.25s linear infinite; filter:drop-shadow(0 22px 50px rgba(0,20,90,.22)); }
+.segment-loader .seg { position:absolute; left:50%; top:50%; display:block; background:#fff; border-radius:999px; transform-origin:center; opacity:.96; }
+.segment-loader .seg-1 { width:94px; height:20px; transform:translate(-50%,-50%) rotate(-42deg) translateY(-52px); }
+.segment-loader .seg-2 { width:46px; height:20px; transform:translate(-50%,-50%) rotate(22deg) translateY(-58px); opacity:.78; }
+.segment-loader .seg-3 { width:38px; height:20px; transform:translate(-50%,-50%) rotate(88deg) translateY(-55px); opacity:.68; }
+.segment-loader .seg-4 { width:34px; height:20px; transform:translate(-50%,-50%) rotate(148deg) translateY(-54px); opacity:.58; }
+.segment-loader .seg-5 { width:40px; height:20px; transform:translate(-50%,-50%) rotate(208deg) translateY(-55px); opacity:.7; }
+.segment-loader .seg-6 { width:48px; height:20px; transform:translate(-50%,-50%) rotate(278deg) translateY(-56px); opacity:.86; }
 .waiting-copy { max-width:360px; display:flex; flex-direction:column; align-items:center; }
 .waiting-content h1 { margin:0; font-size:24px; line-height:1.15; max-width:330px; font-weight:950; letter-spacing:-.035em; }
 .waiting-content p { margin:14px 0 0; max-width:330px; color:#dbeafe; font-size:14px; font-weight:750; line-height:1.45; }
@@ -204,8 +215,7 @@ onBeforeUnmount(() => { clearInterval(timer); ws?.close() })
 @keyframes spin { to { transform:rotate(360deg); } }
 @media (max-width: 380px) {
   .waiting-content { padding-left:24px; padding-right:24px; gap:24px; }
-  .arrow-loader { width:120px; height:120px; }
-  .arrow-loader::before { width:96px; height:96px; }
+  .segment-loader { width:126px; height:126px; transform:scale(.86); }
   .waiting-content h1 { font-size:21px; max-width:290px; }
   .waiting-content p { font-size:13px; max-width:290px; }
 }
