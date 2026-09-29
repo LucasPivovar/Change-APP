@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Patch, P
 import { Throttle } from '@nestjs/throttler';
 import { SessionGuard, SessionRequest } from '../session';
 import { ChatsService } from './chats.service';
-import { CleanTranscriptDto, CreateChatDto, PageDto, SendMessageDto, UpdateChatDto } from './dto';
+import { CleanTranscriptDto, CreateChatDto, EvaluateScenarioDto, PageDto, SendMessageDto, UpdateChatDto } from './dto';
 
 @Controller('chats')
 @UseGuards(SessionGuard)
@@ -16,6 +16,8 @@ export class ChatsController {
   @Get(':id/messages') history(@Req() req: SessionRequest, @Param('id', new ParseUUIDPipe({ version: '4' })) id: string, @Query() page: PageDto) { return this.chats.history(this.owner(req), id, page); }
   @Post(':id/messages') @HttpCode(200) @Throttle({ default: { limit: 10, ttl: 60000 } })
   send(@Req() req: SessionRequest, @Param('id', new ParseUUIDPipe({ version: '4' })) id: string, @Body() dto: SendMessageDto) { return this.chats.send(this.owner(req), id, dto); }
+  @Post(':id/evaluate') @HttpCode(200) @Throttle({ default: { limit: 4, ttl: 60000 } })
+  evaluate(@Req() req: SessionRequest, @Param('id', new ParseUUIDPipe({ version: '4' })) id: string, @Body() dto: EvaluateScenarioDto) { return this.chats.evaluate(this.owner(req), id, dto); }
   @Post('speech/clean') @HttpCode(200) @Throttle({ default: { limit: 10, ttl: 60000 } })
   async cleanSpeech(@Req() req: SessionRequest, @Body() dto: CleanTranscriptDto) {
     return { text: await this.chats.cleanTranscript(this.owner(req), dto) };

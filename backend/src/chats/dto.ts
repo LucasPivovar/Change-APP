@@ -1,5 +1,5 @@
 import { Transform, Type } from 'class-transformer';
-import { IsIn, IsInt, ValidateIf, IsString, IsUUID, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { IsIn, IsInt, ValidateIf, IsObject, IsString, IsUUID, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 const trim = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value;
 
@@ -15,6 +15,14 @@ export class CreateChatDto {
 
   @ValidateIf((_object, value) => value !== undefined) @IsIn(['kids', 'teens', 'adults', 'adult', 'business', 'researchers', '50plus', 'general'])
   audience: string = 'general';
+
+  @ValidateIf((_object, value) => value !== undefined) @IsObject()
+  scenario?: Record<string, unknown>;
+}
+
+export class EvaluateScenarioDto {
+  @ValidateIf((_object, value) => value !== undefined) @IsObject()
+  scenario?: Record<string, unknown>;
 }
 
 export class SendMessageDto {

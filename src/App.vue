@@ -17,6 +17,7 @@ import ProfileView from './components/ProfileView.vue'
 import TermsView from './components/TermsView.vue'
 import FriendsView from './components/FriendsView.vue'
 import FriendChatView from './components/FriendChatView.vue'
+import PracticeScenarioView from './components/PracticeScenarioView.vue'
 import { currentUser, logout } from './services/chatApi'
 
 const currentForm = ref(currentUser() ? 'home' : 'login')
@@ -25,6 +26,7 @@ const selectedCourse = ref(null)
 const isSidebarOpen = ref(false)
 const activeAiChatId = ref(null)
 const activeFriendConversationId = ref(null)
+const selectedScenario = ref(null)
 const openAiChat = (id) => {
   if (!id) {
     activeAiChatId.value = null
@@ -59,8 +61,16 @@ const handleModeSelect = (mode) => {
   } else if (mode === 'mascot') {
     activeAiChatId.value = null
     activeFriendConversationId.value = null
-    currentForm.value = 'mascot-chat'
+    selectedScenario.value = null
+    currentForm.value = 'practice-scenarios'
   }
+}
+
+const handleScenarioSelect = (scenario) => {
+  selectedScenario.value = scenario
+  activeAiChatId.value = null
+  activeFriendConversationId.value = null
+  currentForm.value = 'mascot-chat'
 }
 
 const handleNavigation = (route) => {
@@ -81,7 +91,7 @@ const handleNavigation = (route) => {
 const lastForm = ref('home')
 
 watch(currentForm, (newVal) => {
-  const chatViews = ['chat', 'saved-chat', 'group-chat', 'mascot-chat', 'friend-chat']
+  const chatViews = ['chat', 'saved-chat', 'group-chat', 'mascot-chat', 'friend-chat', 'practice-scenarios']
   if (!chatViews.includes(newVal)) {
     lastForm.value = newVal
   }
@@ -166,11 +176,22 @@ const handleGoBack = () => {
   </transition>
 
   <transition name="fade">
+    <PracticeScenarioView
+      v-if="currentForm === 'practice-scenarios'"
+      :language="selectedLanguage || 'en'"
+      :courseId="selectedCourse || 'general'"
+      @goBack="currentForm = 'course-mode'"
+      @selectScenario="handleScenarioSelect"
+    />
+  </transition>
+
+  <transition name="fade">
     <MascotChatView 
       v-if="currentForm === 'mascot-chat'"
       :chatId="activeAiChatId"
       :language="selectedLanguage || 'en'"
       :courseId="selectedCourse || 'general'"
+      :scenario="selectedScenario"
       @created="activeAiChatId = $event"
       @history="currentForm = 'conversations'"
       @goBack="handleGoBack"

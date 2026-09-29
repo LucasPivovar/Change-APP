@@ -27,6 +27,10 @@
     </header>
     <div class="chat-content" ref="messagesListRef" aria-live="polite">
       <p v-if="loading" role="status">Carregando conversa…</p>
+      <div v-if="props.scenario" class="scenario-banner">
+        <div><strong>{{ props.scenario.icon }} {{ props.scenario.title }}</strong><span>{{ props.scenario.description }}</span></div>
+        <button type="button" :disabled="evaluating" @click="finishScenario">Finalizar prática</button>
+      </div>
       <p v-else-if="ready && !messages.length && !sending" class="empty-chat">Olá! Sou o Camaleão IA. Sobre o que vamos conversar para praticar seu idioma?</p>
       <div class="messages-list">
         <div v-if="tips.length" class="tips-card">
@@ -56,13 +60,21 @@
         </div>
       </div>
     </div>
+    <div v-if="evaluation" class="evaluation-card">
+      <strong>Prática concluída</strong>
+      <div class="evaluation-stars">{{ '★'.repeat(evaluation.stars) }}{{ '☆'.repeat(5 - evaluation.stars) }}</div>
+      <p>{{ evaluation.feedback }}</p>
+      <button type="button" @click="$emit('goBack')">Escolher outra prática</button>
+      <button type="button" class="secondary" @click="restartScenario">Praticar de novo</button>
+    </div>
     <div v-if="error" class="chat-error" role="alert">{{ error }} <button v-if="!ready" @click="initialize">Tentar novamente</button></div>
     <form class="chat-input-area" @submit.prevent="sendMessage">
       <div class="input-wrapper">
-        <button type="button" class="voice-btn" :class="{ listening }" :aria-label="listening ? 'Parar gravação' : 'Falar mensagem'" :disabled="!ready || sending" @click="toggleVoice"><MicIcon :size="18" /></button>
-        <input type="text" aria-label="Mensagem para o Camaleão" placeholder="Digite sua mensagem…" v-model="newMessage" :disabled="!ready || sending" maxlength="4000" />
-        <button class="send-btn" aria-label="Enviar mensagem" :disabled="!ready || sending || !newMessage.trim()"><SendIcon :size="18" /></button>
+        <button type="button" class="voice-btn" :class="{ listening }" :aria-label="listening ? 'Parar gravação' : 'Falar mensagem'" :disabled="!ready || sending || scenarioComplete" @click="toggleVoice"><MicIcon :size="18" /></button>
+        <input type="text" aria-label="Mensagem para o Camaleão" placeholder="Digite sua mensagem…" v-model="newMessage" :disabled="!ready || sending || scenarioComplete" maxlength="4000" />
+        <button class="send-btn" aria-label="Enviar mensagem" :disabled="!ready || sending || scenarioComplete || cooldownRemaining > 0 || !newMessage.trim()"><SendIcon :size="18" /></button>
       </div>
+      <small v-if="cooldownRemaining > 0" class="cooldown-msg">Aguarde {{ cooldownRemaining }}s para enviar outra mensagem.</small>
     </form>
   </div>
 </template>
@@ -70,10 +82,12 @@
 import { ref, onMounted, nextTick } from 'vue'
 import { ChevronLeftIcon, HistoryIcon, LanguagesIcon, LightbulbIcon, MicIcon, MoreVerticalIcon, SendIcon, SettingsIcon } from '@lucide/vue'
 import { chatApi, currentUser, profileApi } from '../services/chatApi'
+import { scenarioScoreKey } from '../data/practiceScenarios.js'
 const props = defineProps({
   chatId: { type: String, default: null },
   language: { type: String, default: 'en' },
-  courseId: { type: String, default: 'general' }
+  courseId: { type: String, default: 'general' },
+  scenario: { type: Object, default: null }
 })
 const emit = defineEmits(['goBack', 'history', 'created'])
 const messages = ref([])
@@ -82,6 +96,12 @@ const loading = ref(false)
 const sending = ref(false)
 const ready = ref(false)
 const error = ref('')
+const scenarioComplete = ref(false)
+const evaluation = ref(null)
+const cooldownUntil = ref(0)
+const cooldownRemaining = ref(0)
+const evaluating = ref(false)
+let cooldownTimer = null
 const messagesListRef = ref(null)
 const isMenuOpen = ref(false)
 const isSettingsOpen = ref(false)
@@ -94,6 +114,7 @@ let activeId = props.chatId
 let pending = null
 let recognition = null
 let transcriptBuffer = ''
+const scenarioStorageKey = () => props.scenario ? scenarioScoreKey(props.language, props.courseId, props.scenario.id) : ''
 const tipMemoryKey = `change-skills-used-tips-${props.courseId}-${props.language}`
 const tipsByAudience = {
   kids: [
@@ -267,9 +288,11 @@ async function initialize() {
     if (!activeId) {
       const courseId = props.courseId || 'general'
       const chat = await chatApi('/chats', { method: 'POST', body: {
+        title: props.scenario ? props.scenario.title : undefined,
         language: props.language || 'en',
-        courseId,
+        courseId: props.scenario ? 'scenario:' + props.scenario.id : courseId,
         audience: audienceForCourse(courseId),
+        scenario: props.scenario || undefined,
       } })
       activeId = chat.id
       emit('created', activeId)
@@ -291,7 +314,7 @@ async function initialize() {
 }
 async function sendMessage() {
   const content = newMessage.value.trim()
-  if (!content || sending.value || !ready.value) return
+  if (!content || sending.value || !ready.value || scenarioComplete.value || cooldownRemaining.value > 0) return
 
   // Retain the same key on retry after a network failure.
   if (!pending || pending.content !== content) pending = { content, requestId: crypto.randomUUID() }
@@ -310,13 +333,22 @@ async function sendMessage() {
   await scrollToBottom()
 
   try {
+    startCooldown(8)
+    await new Promise(resolve => setTimeout(resolve, props.scenario ? 3000 : 600))
     const result = await chatApi(`/chats/${activeId}/messages`, { method: 'POST', body: { ...pending, translate: translationEnabled.value } })
     // Remove mensagem temporária e insere as mensagens oficiais
     messages.value = messages.value.filter(m => m.id !== tempId)
     const known = new Set(messages.value.map(message => message.id))
     messages.value.push(...result.messages.filter(message => !known.has(message.id)))
     const assistant = result.messages.filter(message => message.role === 'assistant').at(-1)
-    if (assistant) speak(assistant.content)
+    if (assistant) {
+      if (assistant.content.includes('[[SCENARIO_COMPLETE]]')) {
+        assistant.content = assistant.content.replace('[[SCENARIO_COMPLETE]]', '').trim()
+        scenarioComplete.value = true
+        await finishScenario()
+      }
+      speak(assistant.content)
+    }
     pending = null
     await scrollToBottom()
   } catch (e) {
@@ -329,6 +361,36 @@ async function sendMessage() {
     sending.value = false
     await scrollToBottom()
   }
+}
+function startCooldown(seconds) {
+  cooldownUntil.value = Date.now() + seconds * 1000
+  if (cooldownTimer) clearInterval(cooldownTimer)
+  cooldownTimer = setInterval(() => {
+    cooldownRemaining.value = Math.max(0, Math.ceil((cooldownUntil.value - Date.now()) / 1000))
+    if (cooldownRemaining.value <= 0) clearInterval(cooldownTimer)
+  }, 250)
+  cooldownRemaining.value = seconds
+}
+async function finishScenario() {
+  if (!props.scenario || evaluating.value || evaluation.value) return
+  evaluating.value = true
+  error.value = ''
+  try {
+    const result = await chatApi(`/chats/${activeId}/evaluate`, { method: 'POST', body: { scenario: props.scenario } })
+    evaluation.value = { stars: Math.max(1, Math.min(5, Number(result.stars || 1))), feedback: result.feedback || 'Boa prática! Continue treinando.' }
+    scenarioComplete.value = true
+    const key = scenarioStorageKey()
+    if (key) localStorage.setItem(key, String(Math.max(Number(localStorage.getItem(key) || 0), evaluation.value.stars)))
+  } catch (e) { error.value = e.message }
+  finally { evaluating.value = false }
+}
+function restartScenario() {
+  activeId = null
+  messages.value = []
+  evaluation.value = null
+  scenarioComplete.value = false
+  ready.value = false
+  initialize()
 }
 onMounted(initialize)
 </script>
@@ -962,4 +1024,16 @@ onMounted(initialize)
 .chat-error { padding: 12px 20px; color: #9f1239; background: #fff1f2; }
 .message-bubble p { white-space: pre-wrap; overflow-wrap: anywhere; }
 .empty-chat { color: #64748b; padding: 20px; }
+.scenario-banner { margin:0 0 14px; background:#fff; border:1px solid #bfdbfe; border-radius:18px; padding:12px; display:flex; align-items:center; gap:10px; justify-content:space-between; box-shadow:0 8px 20px rgba(28,91,240,.08); }
+.scenario-banner div { display:grid; gap:4px; }
+.scenario-banner strong { color:#1a235c; font-size:14px; }
+.scenario-banner span { color:#64748b; font-size:12px; font-weight:600; }
+.scenario-banner button, .evaluation-card button { border:0; background:#1c5bf0; color:white; border-radius:999px; padding:9px 12px; font-weight:800; white-space:nowrap; }
+.scenario-banner button:disabled { opacity:.6; }
+.evaluation-card { background:#fff; border-top:1px solid #e2e8f0; padding:16px 20px; display:grid; gap:8px; text-align:center; }
+.evaluation-card strong { color:#1a235c; font-size:18px; }
+.evaluation-stars { color:#f59e0b; font-size:24px; letter-spacing:2px; }
+.evaluation-card p { margin:0; color:#475569; font-weight:600; line-height:1.35; }
+.evaluation-card .secondary { background:#eef4ff; color:#1c5bf0; }
+.cooldown-msg { display:block; padding:6px 10px 0; color:#64748b; font-weight:700; font-size:11px; }
 </style>

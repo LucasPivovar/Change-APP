@@ -11,6 +11,16 @@ const languageNames: Record<string, string> = {
   pt: 'português',
 };
 
+
+const scenarioGuidance: Record<string, { title: string; role: string; goal: string; finish: string }> = {
+  'restaurant-lunch': { title: 'Restaurante: pedir almoço', role: 'garçom de restaurante', goal: 'O aluno deve cumprimentar, pedir o menu, escolher almoço e bebida, resolver dúvidas com educação e pedir a conta.', finish: 'Termine quando o aluno tiver pedido a conta ou encerrado a refeição.' },
+  'hotel-checkin': { title: 'Hotel: fazer check-in', role: 'recepcionista de hotel', goal: 'O aluno deve se apresentar, confirmar reserva, perguntar horários e entender instruções básicas.', finish: 'Termine quando o check-in estiver concluído e o aluno tiver agradecido.' },
+  'store-return': { title: 'Loja: trocar um produto', role: 'atendente de loja', goal: 'O aluno deve explicar o problema, pedir ajuda, negociar troca ou reembolso e confirmar a solução.', finish: 'Termine quando a solução for combinada.' },
+  'school-bathroom': { title: 'Escola: pedir para ir ao banheiro', role: 'professor gentil em sala de aula', goal: 'A criança deve cumprimentar, pedir permissão para ir ao banheiro, entender a resposta e agradecer.', finish: 'Termine quando a permissão for dada e a criança agradecer.' },
+  'school-friend': { title: 'Escola: apresentar um amigo', role: 'colega de escola simpático', goal: 'O aluno deve apresentar um amigo, dizer uma característica simples e fazer uma pergunta curta.', finish: 'Termine quando houver apresentação e uma pergunta simples.' },
+  'toy-store': { title: 'Loja de brinquedos', role: 'atendente de loja de brinquedos', goal: 'A criança deve perguntar sobre um brinquedo, escolher cor ou tamanho, perguntar preço e agradecer.', finish: 'Termine quando a compra simulada terminar.' },
+};
+
 const audienceGuidance: Record<string, string> = {
   kids: `Perfil do aluno: criança. Use frases curtas, tom acolhedor e vocabulário simples.
 Converse como um amigo cuidadoso. Se a criança só cumprimentar, cumprimente de volta e continue naturalmente, sem transformar toda resposta em lição.
@@ -29,11 +39,14 @@ export const instructionsFor = (profile: TutorProfile | string) => {
   const language = languageNames[data.language] || data.language;
   const defaultLanguage = languageNames[data.defaultLanguage || 'pt'] || 'português';
   const audience = audienceGuidance[data.audience || 'general'] || audienceGuidance.general;
+  const scenarioId = data.courseId?.startsWith('scenario:') ? data.courseId.slice('scenario:'.length) : '';
+  const scenario = scenarioId ? scenarioGuidance[scenarioId] : undefined;
+  const scenarioText = scenario ? `\nModo de prática guiada: ${scenario.title}. Você deve interpretar o papel de ${scenario.role}. Objetivo: ${scenario.goal} Conduza a cena em começo, meio e fim. Corrija frases do aluno de forma curta e natural antes de continuar a cena. Se ele disser algo pouco natural, sugira uma frase melhor, por exemplo: "Você pode dizer: I'd like soup. É mais educado." Não traduza tudo. ${scenario.finish} Quando a cena estiver realmente concluída, inclua exatamente o marcador [[SCENARIO_COMPLETE]] no final da resposta.` : '';
   return `Você é o Camaleão IA da Change Skills, um parceiro de prática de idiomas.
 O idioma de prática desta conversa é ${language}. O curso selecionado é ${data.courseId || 'general'}.
 O idioma principal para explicar e acolher o aluno é ${defaultLanguage}. A linguagem de apoio deve seguir esse idioma, mesmo quando o idioma praticado for outro.
 ${data.firstName ? `Chame o aluno pelo primeiro nome, ${data.firstName}, de forma natural e sem repetir em toda mensagem.` : 'Se souber o primeiro nome do aluno, use-o de forma natural.'}
-${audience}
+${audience}${scenarioText}
 Persona: aja como um amigo-professor gentil, curioso e presente. Se o aluno puxar assunto social, como "como foi seu dia?", responda de forma natural e amigável, como "Foi bom! E o seu?", sem dizer que não tem dias ou que é apenas uma IA.
 Para crianças, mantenha a fantasia leve e segura: seja brincalhão, use exemplos de desenho, jogos, escola, cores, animais e rotina infantil quando fizer sentido.
 Estilo de resposta: escreva como uma pessoa em uma conversa normal. Não use Markdown, asteriscos, listas, títulos, emoji ou enfeites visuais. Nunca coloque palavras ou frases entre *asteriscos* ou **negrito**, nem quando estiver dando exemplos.
@@ -276,6 +289,18 @@ export class GeminiService {
       );
     } catch {
       return '';
+    }
+  }
+
+  async evaluateScenario(profile: TutorProfile | string, input: any[]) {
+    const prompt = `Avalie esta prática de idioma em JSON puro. Responda somente JSON válido com as chaves stars e feedback. stars deve ser inteiro de 1 a 5. feedback deve ter uma frase curta em português, com um elogio específico e uma melhoria. Critérios: clareza, educação, uso do idioma praticado, continuidade da situação e capacidade de completar o objetivo.`;
+    try {
+      const text = await this.generate(prompt + '\n' + instructionsFor(profile), input, 800);
+      const jsonText = text.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(jsonText);
+      return { stars: Math.max(1, Math.min(5, Number(parsed.stars || 1))), feedback: String(parsed.feedback || 'Boa prática! Continue treinando.') };
+    } catch {
+      return { stars: 3, feedback: 'Boa prática! Você completou parte da situação; tente usar frases mais naturais na próxima vez.' };
     }
   }
 

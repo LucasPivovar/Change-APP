@@ -2,7 +2,7 @@ import { ConflictException, Injectable, NotFoundException, UnprocessableEntityEx
 import { randomUUID } from 'node:crypto';
 import { DatabaseService } from '../database.service';
 import { config } from '../config';
-import { CreateChatDto, PageDto, SendMessageDto } from './dto';
+import { CreateChatDto, EvaluateScenarioDto, PageDto, SendMessageDto } from './dto';
 import { GeminiService, instructionsFor } from './gemini.service';
 
 type Chat = { id: string; title: string; language: string; courseId: string; audience: string; createdAt: string; updatedAt: string };
@@ -112,6 +112,17 @@ export class ChatsService {
     } finally {
       this.busy.delete(id);
     }
+  }
+
+  async evaluate(owner: string, id: string, _dto: EvaluateScenarioDto) {
+    const chat = this.get(owner, id);
+    const turns = this.database.db.prepare('SELECT * FROM turns WHERE chat_id = ? ORDER BY sequence ASC').all(id) as Turn[];
+    const input: StoredContextItem[] = turns.flatMap(turn => [
+      { role: 'user' as const, content: turn.user_text },
+      { role: 'assistant' as const, content: turn.assistant_text },
+    ]);
+    const profile = { language: chat.language, courseId: chat.courseId, audience: chat.audience, ...this.userProfile(owner) };
+    return this.ai.evaluateScenario(profile, input);
   }
 
   cleanTranscript(owner: string, dto: { text: string; defaultLanguage: string }) {
