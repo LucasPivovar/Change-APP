@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
+const { WebSocketServer } = require('ws');
 
 loadEnv(path.join(__dirname, '.env'));
 
@@ -13,10 +14,11 @@ const languageNames = { en: 'inglês', es: 'espanhol', fr: 'francês', pt: 'port
 const scenarioGuidance = {
   'kids-first-school-day': { title: "Primeiro dia de aula", role: "professora gentil no primeiro dia de aula", goal: "A criança deve cumprimentar a professora, dizer seu nome, perguntar onde sentar, pedir ajuda com um material e se despedir no fim da aula. Etapas esperadas: Cumprimentar a professora > Dizer o nome > Perguntar onde sentar > Pedir ajuda > Se despedir.", finish: "Termine quando todas as etapas da situação forem cumpridas e a conversa tiver um fechamento natural. A cena deve ter começo, meio e fim; não encerre após uma resposta curta." },
   'kids-library-card': { title: "Biblioteca da escola", role: "bibliotecária paciente da escola", goal: "A criança deve explicar que tipo de história quer, pedir ajuda para encontrar o livro, confirmar por quantos dias pode ficar com ele e agradecer. Etapas esperadas: Explicar o livro que quer > Pedir ajuda > Confirmar prazo > Registrar o empréstimo > Agradecer.", finish: "Termine quando todas as etapas da situação forem cumpridas e a conversa tiver um fechamento natural. A cena deve ter começo, meio e fim; não encerre após uma resposta curta." },
-  'kids-after-school-pickup': { title: "Saída da escola", role: "monitor da escola na hora da saída", goal: "A criança deve dizer quem vem buscá-la, pedir ajuda para ligar, entender onde esperar e avisar quando a pessoa chegar. Etapas esperadas: Dizer quem busca > Pedir ajuda > Entender onde esperar > Avisar que chegou > Agradecer.", finish: "Termine quando todas as etapas da situação forem cumpridas e a conversa tiver um fechamento natural. A cena deve ter começo, meio e fim; não encerre após uma resposta curta." },
+  'kids-class-presentation': { title: "Apresentação na sala", role: "professora gentil conduzindo uma apresentação na sala", goal: "A criança deve cumprimentar, dizer o nome, falar idade ou algo que gosta, perguntar o nome de um colega e responder uma pergunta simples. Etapas esperadas: Cumprimentar > Dizer o nome > Falar algo que gosta > Perguntar nome do colega > Responder pergunta simples.", finish: "Termine quando todas as etapas da situação forem cumpridas e a conversa tiver um fechamento natural. A cena deve ter começo, meio e fim; não encerre após uma resposta curta." },
   'kids-birthday-party': { title: "Festa de aniversário", role: "aniversariante animado e educado", goal: "A criança deve cumprimentar, dar parabéns, entregar o presente, perguntar sobre uma brincadeira ou bolo e se despedir. Etapas esperadas: Dar parabéns > Entregar presente > Perguntar da festa > Combinar brincadeira > Se despedir.", finish: "Termine quando todas as etapas da situação forem cumpridas e a conversa tiver um fechamento natural. A cena deve ter começo, meio e fim; não encerre após uma resposta curta." },
-  'kids-small-accident': { title: "Machucou no recreio", role: "enfermeira escolar acolhedora", goal: "A criança deve explicar que caiu ou se machucou, dizer onde dói, responder perguntas simples e repetir a orientação principal. Etapas esperadas: Explicar o que aconteceu > Dizer onde dói > Responder perguntas > Entender orientação > Agradecer.", finish: "Termine quando todas as etapas da situação forem cumpridas e a conversa tiver um fechamento natural. A cena deve ter começo, meio e fim; não encerre após uma resposta curta." },
-  'kids-pet-vet': { title: "Levar o pet ao veterinário", role: "veterinário gentil para crianças", goal: "A criança deve apresentar o pet, explicar um sintoma simples, responder há quanto tempo acontece e confirmar o cuidado em casa. Etapas esperadas: Apresentar o pet > Explicar sintoma > Responder quando começou > Entender cuidado > Se despedir.", finish: "Termine quando todas as etapas da situação forem cumpridas e a conversa tiver um fechamento natural. A cena deve ter começo, meio e fim; não encerre após uma resposta curta." },
+  'kids-school-cafeteria': { title: "Lanche na escola", role: "atendente gentil da cantina da escola", goal: "A criança deve cumprimentar, perguntar opções simples, pedir um lanche e uma bebida, perguntar preço e agradecer. Etapas esperadas: Cumprimentar > Perguntar opções > Pedir lanche > Pedir bebida > Perguntar preço > Agradecer.", finish: "Termine quando todas as etapas da situação forem cumpridas e a conversa tiver um fechamento natural. A cena deve ter começo, meio e fim; não encerre após uma resposta curta." },
+  'kids-shopping-snack': { title: "Pedido no shopping", role: "atendente paciente de uma lanchonete no shopping", goal: "A criança deve cumprimentar, perguntar uma opção do menu, pedir comida e bebida, confirmar o pedido e agradecer. Etapas esperadas: Cumprimentar > Perguntar o menu > Pedir comida > Pedir bebida > Confirmar pedido > Agradecer.", finish: "Termine quando todas as etapas da situação forem cumpridas e a conversa tiver um fechamento natural. A cena deve ter começo, meio e fim; não encerre após uma resposta curta." },
+  'kids-toy-store': { title: "Loja de brinquedos", role: "atendente gentil de loja de brinquedos", goal: "A criança deve pedir ajuda para achar um brinquedo, dizer cor ou tamanho, perguntar preço, confirmar escolha e agradecer. Etapas esperadas: Pedir ajuda > Dizer brinquedo > Escolher cor > Perguntar preço > Confirmar escolha > Agradecer.", finish: "Termine quando todas as etapas da situação forem cumpridas e a conversa tiver um fechamento natural. A cena deve ter começo, meio e fim; não encerre após uma resposta curta." },
   'teen-first-club-meeting': { title: "Entrar em um clube da escola", role: "aluno responsável pelo clube", goal: "O adolescente deve se apresentar, falar do interesse, perguntar regras/horários, escolher uma tarefa inicial e confirmar a próxima reunião. Etapas esperadas: Se apresentar > Explicar interesse > Perguntar regras > Escolher tarefa > Confirmar próxima reunião.", finish: "Termine quando todas as etapas da situação forem cumpridas e a conversa tiver um fechamento natural. A cena deve ter começo, meio e fim; não encerre após uma resposta curta." },
   'teen-group-project-conflict': { title: "Trabalho em grupo com atraso", role: "colega de grupo tentando terminar o projeto", goal: "O adolescente deve explicar o atraso sem brigar, propor divisão de tarefas, pedir ajuda em uma parte e combinar entrega. Etapas esperadas: Explicar problema > Pedir ajuda > Dividir tarefas > Combinar prazo > Confirmar plano.", finish: "Termine quando todas as etapas da situação forem cumpridas e a conversa tiver um fechamento natural. A cena deve ter começo, meio e fim; não encerre após uma resposta curta." },
   'teen-movie-plans': { title: "Planejar cinema com amigos", role: "amigo planejando o cinema", goal: "O adolescente deve sugerir filme, negociar horário, combinar encontro, falar sobre lanche e confirmar o plano final. Etapas esperadas: Sugerir filme > Negociar horário > Combinar encontro > Falar de lanche > Confirmar volta.", finish: "Termine quando todas as etapas da situação forem cumpridas e a conversa tiver um fechamento natural. A cena deve ter começo, meio e fim; não encerre após uma resposta curta." },
@@ -92,6 +94,8 @@ async function init() {
   await pool.query(`CREATE TABLE IF NOT EXISTS groups (id VARCHAR(36) PRIMARY KEY, owner_id VARCHAR(36) NOT NULL, name VARCHAR(120) NOT NULL, invite_code VARCHAR(40) NOT NULL UNIQUE, max_members INT NOT NULL DEFAULT 10, is_public TINYINT NOT NULL DEFAULT 0, created_at VARCHAR(40) NOT NULL, updated_at VARCHAR(40) NOT NULL, INDEX(owner_id), INDEX(updated_at)) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
   await pool.query(`CREATE TABLE IF NOT EXISTS group_members (id VARCHAR(36) PRIMARY KEY, group_id VARCHAR(36) NOT NULL, user_id VARCHAR(36) NOT NULL, role VARCHAR(20) NOT NULL DEFAULT 'member', joined_at VARCHAR(40) NOT NULL, UNIQUE KEY group_user (group_id, user_id), INDEX(user_id)) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
   await pool.query(`CREATE TABLE IF NOT EXISTS group_messages (id VARCHAR(36) PRIMARY KEY, group_id VARCHAR(36) NOT NULL, sender_id VARCHAR(36) NOT NULL, content MEDIUMTEXT NOT NULL, sequence INT NOT NULL, created_at VARCHAR(40) NOT NULL, INDEX group_seq (group_id, sequence)) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS practice_sessions (id VARCHAR(36) PRIMARY KEY, language VARCHAR(8) NOT NULL, audience VARCHAR(40) NOT NULL, user_a_id VARCHAR(36) NOT NULL, user_b_id VARCHAR(36) NOT NULL, started_at VARCHAR(40) NOT NULL, ends_at VARCHAR(40) NOT NULL, ended_at VARCHAR(40) NULL, INDEX(user_a_id), INDEX(user_b_id), INDEX(started_at)) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS practice_messages (id VARCHAR(36) PRIMARY KEY, session_id VARCHAR(36) NOT NULL, sender_id VARCHAR(36) NOT NULL, content MEDIUMTEXT NOT NULL, created_at VARCHAR(40) NOT NULL, INDEX(session_id), INDEX(sender_id)) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
 }
 async function one(sql, params = []) { const [rows] = await pool.query(sql, params); return rows[0] || null; }
 async function all(sql, params = []) { const [rows] = await pool.query(sql, params); return rows; }
@@ -158,9 +162,18 @@ function chatMessages(t, translation = '') { return [{ id: `${t.id}:user`, role:
 function chatDto(c) { return { id: c.id, title: c.title, language: c.language, courseId: c.course_id, audience: c.audience, createdAt: c.created_at, updatedAt: c.updated_at }; }
 async function profileStats(userId) {
   const turns = await all('SELECT t.created_at FROM turns t JOIN chats c ON c.id = t.chat_id WHERE c.owner_id = ?', [userId]);
-  const days = new Set(turns.map(t => t.created_at.slice(0, 10))); let streak = 0; const cursor = new Date(); while (days.has(cursor.toISOString().slice(0,10))) { streak++; cursor.setUTCDate(cursor.getUTCDate() - 1); }
+  const sessions = await all('SELECT started_at, COALESCE(ended_at, ends_at) ended_at FROM practice_sessions WHERE user_a_id = ? OR user_b_id = ?', [userId, userId]).catch(() => []);
+  const days = new Set(turns.map(t => t.created_at.slice(0, 10)));
+  for (const session of sessions) days.add(String(session.started_at).slice(0, 10));
+  let streak = 0; const cursor = new Date(); while (days.has(cursor.toISOString().slice(0,10))) { streak++; cursor.setUTCDate(cursor.getUTCDate() - 1); }
   const f = await one('SELECT COUNT(*) total FROM friendships WHERE status = ? AND (requester_id = ? OR addressee_id = ?)', ['accepted', userId, userId]);
-  return { streakDays: streak, friends: Number(f.total || 0), practicedSeconds: turns.length * 60, messageCount: turns.length };
+  const sessionSeconds = sessions.reduce((total, row) => {
+    const start = new Date(row.started_at).getTime();
+    const end = new Date(row.ended_at || row.started_at).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return total;
+    return total + Math.min(5 * 60, Math.floor((end - start) / 1000));
+  }, 0);
+  return { streakDays: streak, friends: Number(f.total || 0), practicedSeconds: sessionSeconds + turns.length * 60, messageCount: turns.length };
 }
 
 async function groupMember(groupId, userId) { return one('SELECT * FROM group_members WHERE group_id=? AND user_id=?', [groupId, userId]); }
@@ -173,9 +186,137 @@ async function friendStreak(userId, friendId){
   const conv = await one('SELECT * FROM friend_conversations WHERE (user_a_id=? AND user_b_id=?) OR (user_a_id=? AND user_b_id=?)',[userId,friendId,friendId,userId]);
   if(!conv) return { streakDays:0, messageCount:0, lastMessageAt:null };
   const msgs = await all('SELECT sender_id, created_at FROM friend_messages WHERE conversation_id=? ORDER BY sequence ASC',[conv.id]);
-  const byDay = new Map(); for(const m of msgs){ const d=m.created_at.slice(0,10); if(!byDay.has(d)) byDay.set(d,new Set()); byDay.get(d).add(m.sender_id); }
-  const valid = new Set([...byDay.entries()].filter(([,s])=>s.has(userId)&&s.has(friendId)).map(([d])=>d)); let streak=0; const cursor=new Date(); while(valid.has(cursor.toISOString().slice(0,10))){ streak++; cursor.setUTCDate(cursor.getUTCDate()-1); }
+  const byDay = new Map();
+  for(const m of msgs){
+    const d=m.created_at.slice(0,10);
+    const info=byDay.get(d)||{senders:new Set(), first:m.created_at, last:m.created_at};
+    info.senders.add(m.sender_id);
+    if(new Date(m.created_at)<new Date(info.first)) info.first=m.created_at;
+    if(new Date(m.created_at)>new Date(info.last)) info.last=m.created_at;
+    byDay.set(d,info);
+  }
+  const valid = new Set([...byDay.entries()].filter(([,info])=>info.senders.has(userId)&&info.senders.has(friendId)&&(new Date(info.last)-new Date(info.first)>=60000)).map(([d])=>d));
+  let streak=0; const cursor=new Date(); while(valid.has(cursor.toISOString().slice(0,10))){ streak++; cursor.setUTCDate(cursor.getUTCDate()-1); }
   return { streakDays: streak, messageCount: msgs.length, lastMessageAt: msgs.at(-1)?.created_at || null };
+}
+
+
+const matchQueues = new Map();
+const practiceRooms = new Map();
+const tipSets = {
+  kids: {
+    en: ['Ask: What is your favorite game?', 'Ask: What color do you like?', 'Ask: Do you like school?', 'Ask: What snack do you like?'],
+    es: ['Pregunta: ¿Cuál es tu juego favorito?', 'Pregunta: ¿Qué color te gusta?', 'Pregunta: ¿Te gusta la escuela?'],
+    fr: ['Demande: Quel est ton jeu préféré?', 'Demande: Quelle couleur tu aimes?', 'Demande: Tu aimes l’école?'],
+    pt: ['Pergunte: qual é sua brincadeira favorita?', 'Pergunte: que cor você gosta?', 'Pergunte: você gosta da escola?']
+  },
+  teens: {
+    en: ['Ask: What music do you like?', 'Ask: How was your day?', 'Ask: What do you like to do after school?'],
+    es: ['Pregunta: ¿Qué música te gusta?', 'Pregunta: ¿Cómo fue tu día?', 'Pregunta: ¿Qué haces después de la escuela?'],
+    fr: ['Demande: Quelle musique tu aimes?', 'Demande: Comment s’est passée ta journée?', 'Demande: Qu’est-ce que tu fais après l’école?'],
+    pt: ['Pergunte: que música você gosta?', 'Pergunte: como foi seu dia?', 'Pergunte: o que você faz depois da escola?']
+  },
+  general: {
+    en: ['Ask: How was your day?', 'Ask: What food do you like?', 'Ask: Where would you like to travel?'],
+    es: ['Pregunta: ¿Cómo fue tu día?', 'Pregunta: ¿Qué comida te gusta?', 'Pregunta: ¿A dónde te gustaría viajar?'],
+    fr: ['Demande: Comment s’est passée ta journée?', 'Demande: Quel plat tu aimes?', 'Demande: Où voudrais-tu voyager?'],
+    pt: ['Pergunte: como foi seu dia?', 'Pergunte: que comida você gosta?', 'Pergunte: para onde você gostaria de viajar?']
+  },
+  business: {
+    en: ['Ask: What do you do for work?', 'Ask: How was your last meeting?', 'Ask: What project are you working on?'],
+    es: ['Pregunta: ¿En qué trabajas?', 'Pregunta: ¿Cómo fue tu última reunión?', 'Pregunta: ¿En qué proyecto estás trabajando?'],
+    fr: ['Demande: Quel est ton travail?', 'Demande: Comment s’est passée ta dernière réunion?', 'Demande: Sur quel projet tu travailles?'],
+    pt: ['Pergunte: com o que você trabalha?', 'Pergunte: como foi sua última reunião?', 'Pergunte: em que projeto você está trabalhando?']
+  }
+};
+function matchKey(language, audience){ return String(language || 'en') + ':' + String(audience || 'general'); }
+function safeSend(ws, data){ if(ws.readyState === 1) ws.send(JSON.stringify(data)); }
+function randomTip(language, audience){ const group = tipSets[audience] || tipSets.general; const list = group[language] || group.en || tipSets.general.en; return list[Math.floor(Math.random() * list.length)]; }
+function removeFromQueue(socket){
+  for (const [key, queue] of matchQueues.entries()) {
+    const next = queue.filter(item => item.ws !== socket);
+    if (next.length) matchQueues.set(key, next); else matchQueues.delete(key);
+  }
+}
+async function wsUserFromRequest(req){
+  const url = parseUrl(req);
+  const value = url.searchParams.get('token') || '';
+  const session = await one('SELECT * FROM sessions WHERE token = ?', [value]);
+  if (!session?.user_id) return null;
+  return one('SELECT * FROM users WHERE id = ?', [session.user_id]);
+}
+function roomFor(socket){ return socket.practiceRoomId ? practiceRooms.get(socket.practiceRoomId) : null; }
+async function endPracticeRoom(roomId){
+  const room = practiceRooms.get(roomId);
+  if(!room) return;
+  room.ended = true;
+  const endedAt = now();
+  await exec('UPDATE practice_sessions SET ended_at=? WHERE id=? AND ended_at IS NULL',[endedAt, roomId]).catch(()=>{});
+  clearTimeout(room.timeout);
+  for(const client of room.clients){ safeSend(client, { type:'ended', endedAt }); client.practiceRoomId = null; }
+  practiceRooms.delete(roomId);
+}
+async function makeMatch(a, b, language, audience){
+  const roomId = id();
+  const startedAt = now();
+  const endsAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  await exec('INSERT INTO practice_sessions (id,language,audience,user_a_id,user_b_id,started_at,ends_at,ended_at) VALUES (?,?,?,?,?,?,?,NULL)', [roomId, language, audience, a.user.id, b.user.id, startedAt, endsAt]);
+  const room = { id: roomId, language, audience, clients: [a.ws, b.ws], users: new Map([[a.ws, a.user], [b.ws, b.user]]), endsAt, timeout: setTimeout(() => endPracticeRoom(roomId), 5 * 60 * 1000), ended: false };
+  practiceRooms.set(roomId, room);
+  a.ws.practiceRoomId = roomId; b.ws.practiceRoomId = roomId;
+  safeSend(a.ws, { type:'matched', roomId, endsAt, partner: friendUser(b.user), tip: randomTip(language, audience) });
+  safeSend(b.ws, { type:'matched', roomId, endsAt, partner: friendUser(a.user), tip: randomTip(language, audience) });
+}
+function setupPracticeWebSocket(server){
+  const wss = new WebSocketServer({ noServer: true });
+  server.on('upgrade', (req, socket, head) => {
+    const pathname = parseUrl(req).pathname;
+    if (pathname !== '/ws') return socket.destroy();
+    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+  });
+  wss.on('connection', async (ws, req) => {
+    const user = await wsUserFromRequest(req).catch(()=>null);
+    if(!user){ safeSend(ws,{type:'error',message:'Entre na conta para conversar.'}); ws.close(); return; }
+    ws.user = user;
+    safeSend(ws,{type:'ready', user: friendUser(user)});
+    ws.on('message', async (raw) => {
+      try {
+        const data = JSON.parse(String(raw));
+        if(data.type === 'find'){
+          removeFromQueue(ws);
+          const language = ['en','es','fr','pt'].includes(data.language) ? data.language : 'en';
+          const audience = String(data.audience || 'general');
+          const key = matchKey(language, audience);
+          const queue = (matchQueues.get(key) || []).filter(item => item.ws.readyState === 1 && item.user.id !== user.id);
+          const partner = queue.shift();
+          matchQueues.set(key, queue);
+          if(partner) await makeMatch({ws,user}, partner, language, audience);
+          else { const ownQueue = matchQueues.get(key) || []; ownQueue.push({ws,user,createdAt:Date.now()}); matchQueues.set(key, ownQueue); safeSend(ws,{type:'searching', tip: randomTip(language, audience)}); }
+        }
+        if(data.type === 'message'){
+          const room = roomFor(ws); if(!room || room.ended) return;
+          const content = validateText(data.content, 'Mensagem', 1, 1000);
+          const createdAt = now();
+          const message = { id:id(), senderId:user.id, content, createdAt };
+          await exec('INSERT INTO practice_messages (id,session_id,sender_id,content,created_at) VALUES (?,?,?,?,?)',[message.id, room.id, user.id, content, createdAt]);
+          for(const client of room.clients) safeSend(client,{type:'message', message});
+          if(Math.random() < 0.35) safeSend(ws,{type:'tip', tip: randomTip(room.language, room.audience)});
+        }
+        if(data.type === 'addFriend'){
+          const room = roomFor(ws); if(!room) return;
+          const other = [...room.users.values()].find(item => item.id !== user.id); if(!other) return;
+          const rel = await friendship(user.id, other.id);
+          if(!rel){ await exec('INSERT INTO friendships (id,requester_id,addressee_id,status,created_at) VALUES (?,?,?,?,?)',[id(), user.id, other.id, 'pending', now()]); }
+          safeSend(ws,{type:'friendRequestSent'});
+        }
+      } catch (error) { safeSend(ws,{type:'error', message:error.message || 'Erro na conversa.'}); }
+    });
+    ws.on('close', () => {
+      removeFromQueue(ws);
+      const room = roomFor(ws);
+      if(room && !room.ended){ for(const client of room.clients) if(client !== ws) safeSend(client,{type:'partnerLeft'}); endPracticeRoom(room.id); }
+    });
+  });
 }
 
 async function api(req, res) {
@@ -212,4 +353,6 @@ async function api(req, res) {
   throw httpError(404,'Rota não encontrada.');
 }
 const server = http.createServer(async (req,res)=>{ try { if(!req.url.startsWith('/api')) throw httpError(404,'Rota não encontrada.'); await api(req,res); } catch(e){ send(res,e.status||500,{message:e.message||'Erro interno.'}); } });
+setupPracticeWebSocket(server);
 init().then(()=>server.listen(PORT,HOST,()=>console.log(`Change server on ${HOST}:${PORT}`))).catch((e)=>{ console.error(e); process.exit(1); });
+

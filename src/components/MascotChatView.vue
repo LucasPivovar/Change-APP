@@ -29,7 +29,6 @@
       <p v-if="loading" role="status">Carregando conversa…</p>
       <div v-if="props.scenario" class="scenario-banner">
         <div><strong>{{ props.scenario.title }}</strong><span>{{ props.scenario.description }}</span></div>
-        <button type="button" :disabled="evaluating" @click="finishScenario">Finalizar prática</button>
       </div>
       <p v-else-if="ready && !messages.length && !sending" class="empty-chat">Olá! Sou o Camaleão IA. Sobre o que vamos conversar para praticar seu idioma?</p>
       <div class="messages-list">

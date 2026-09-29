@@ -30,6 +30,17 @@
               </div>
               <ChevronRightIcon class="arrow-icon" size="24" stroke-width="2.5" />
             </div>
+
+            <div class="option-card student-card" @click="selectMode('student')">
+              <div class="icon-wrapper student-icon-wrapper">
+                <UsersIcon size="28" stroke-width="2.5" />
+              </div>
+              <div class="option-text">
+                <h3>Conversar com aluno</h3>
+                <p>Faça match com alguém da mesma modalidade por 5 minutos.</p>
+              </div>
+              <ChevronRightIcon class="arrow-icon" size="24" stroke-width="2.5" />
+            </div>
           </div>
           <div class="bottom-banner-wrapper">
             <div class="bottom-banner-pill">
@@ -44,7 +55,7 @@
 </template>
 
 <script setup>
-import { X as XIcon, ChevronRight as ChevronRightIcon } from '@lucide/vue'
+import { X as XIcon, ChevronRight as ChevronRightIcon, Users as UsersIcon } from '@lucide/vue'
 import { t } from '../data/translations.js'
 
 const emit = defineEmits(['goBack', 'selectMode'])
@@ -179,6 +190,11 @@ const selectMode = (mode) => {
   box-shadow: 0 8px 24px rgba(14, 165, 233, 0.1);
 }
 
+.student-card {
+  border-color: #2563eb;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.1);
+}
+
 .icon-wrapper {
   width: 56px;
   height: 56px;
@@ -199,6 +215,11 @@ const selectMode = (mode) => {
 .mascot-icon-wrapper {
   background: #e0f2fe;
   color: #0284c7;
+}
+
+.student-icon-wrapper {
+  background: #eef4ff;
+  color: #1c5bf0;
 }
 
 .main-icon {

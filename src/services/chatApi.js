@@ -74,5 +74,13 @@ export async function profileApi(options = {}) {
   return data
 }
 
+export async function getSessionToken() { return session() }
+
+export function wsUrl(path = '/ws') {
+  const api = baseUrl.startsWith('http') ? baseUrl : `${window.location.origin}${baseUrl}`
+  const url = new URL(api)
+  return `${url.protocol === 'https:' ? 'wss:' : 'ws:'}//${url.host}${path}`
+}
+
 export const friendsApi = (path = '', options = {}) => chatApi(`/friends${path}`, options)
 export const groupsApi = (path = '', options = {}) => chatApi(`/groups${path}`, options)

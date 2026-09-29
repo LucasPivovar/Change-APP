@@ -18,6 +18,7 @@ import TermsView from './components/TermsView.vue'
 import FriendsView from './components/FriendsView.vue'
 import FriendChatView from './components/FriendChatView.vue'
 import PracticeScenarioView from './components/PracticeScenarioView.vue'
+import StudentMatchView from './components/StudentMatchView.vue'
 import { currentUser, logout } from './services/chatApi'
 
 const currentForm = ref(currentUser() ? 'home' : 'login')
@@ -68,6 +69,8 @@ const handleModeSelect = (mode) => {
     activeGroupId.value = null
     inviteGroupCode.value = null
     currentForm.value = 'group-chat'
+  } else if (mode === 'student') {
+    currentForm.value = 'student-match'
   } else if (mode === 'mascot') {
     activeAiChatId.value = null
     activeFriendConversationId.value = null
@@ -101,7 +104,7 @@ const handleNavigation = (route) => {
 const lastForm = ref('home')
 
 watch(currentForm, (newVal) => {
-  const chatViews = ['chat', 'saved-chat', 'group-chat', 'mascot-chat', 'friend-chat', 'practice-scenarios']
+  const chatViews = ['chat', 'saved-chat', 'group-chat', 'mascot-chat', 'friend-chat', 'practice-scenarios', 'student-match']
   if (!chatViews.includes(newVal)) {
     lastForm.value = newVal
   }
@@ -185,6 +188,15 @@ const handleGoBack = () => {
       :inviteCode="inviteGroupCode"
       @openGroup="openGroupChat"
       @goBack="handleGoBack"
+    />
+  </transition>
+
+  <transition name="fade">
+    <StudentMatchView
+      v-if="currentForm === 'student-match'"
+      :language="selectedLanguage || 'en'"
+      :courseId="selectedCourse || 'general'"
+      @goBack="currentForm = 'course-mode'"
     />
   </transition>
 
