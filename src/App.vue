@@ -50,6 +50,24 @@ const openGroupChat = (id) => {
   inviteGroupCode.value = null
   currentForm.value = 'group-chat'
 }
+const startFreeMascotChat = () => {
+  activeAiChatId.value = null
+  selectedScenario.value = null
+  selectedLanguage.value = selectedLanguage.value || 'en'
+  selectedCourse.value = selectedCourse.value || 'general'
+  currentForm.value = 'mascot-chat'
+}
+const startPracticeFlow = () => {
+  activeAiChatId.value = null
+  selectedScenario.value = null
+  if (selectedLanguage.value && selectedCourse.value) currentForm.value = 'practice-scenarios'
+  else currentForm.value = selectedLanguage.value ? 'language-courses' : 'home'
+}
+const startGroupChatFlow = () => {
+  activeGroupId.value = null
+  inviteGroupCode.value = null
+  currentForm.value = 'group-chat'
+}
 if (inviteGroupCode.value && currentUser()) currentForm.value = 'group-chat'
 
 const handleLanguageSelect = (lang) => {
@@ -231,6 +249,9 @@ const handleGoBack = () => {
       @openAiChat="openAiChat"
       @openFriendChat="openFriendChat"
       @navigate="handleNavigation"
+      @newFreeMascot="startFreeMascotChat"
+      @newPractice="startPracticeFlow"
+      @newGroup="startGroupChatFlow"
     />
   </transition>
 

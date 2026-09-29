@@ -5,7 +5,7 @@
       <h2 class="header-title">Chats</h2>
     </header>
 
-    <div class="content-scroll">
+    <div class="content-scroll" @click="showNewChat = false">
       <AiChatHistory @open="$emit('openAiChat', $event)" />
 
       <section class="friends-chats">
@@ -23,6 +23,16 @@
       </section>
     </div>
 
+    <div class="new-chat-fixed" @click.stop>
+      <div v-if="showNewChat" class="new-chat-menu">
+        <button type="button" @click="choose('freeMascot')"><MessageCircleIcon size="20" /><span><strong>Chat com Camaleão</strong><small>Conversa livre, sem cenário.</small></span></button>
+        <button type="button" @click="choose('practice')"><SparklesIcon size="20" /><span><strong>Práticas</strong><small>Situações do dia para treinar.</small></span></button>
+        <button type="button" @click="choose('friends')"><UsersIcon size="20" /><span><strong>Conversa com amigos</strong><small>Fale com pessoas adicionadas.</small></span></button>
+        <button type="button" @click="choose('group')"><UserPlusIcon size="20" /><span><strong>Criar chat em grupo</strong><small>Defina nome, limite e convite.</small></span></button>
+      </div>
+      <button type="button" class="new-chat-button" @click="showNewChat = !showNewChat">Novo chat</button>
+    </div>
+
     <nav class="bottom-nav">
       <div class="nav-item" @click="$emit('navigate', 'home')"><HomeIcon size="28" /><span>Início</span></div>
       <div class="nav-item active" @click="$emit('navigate', 'conversations')"><MessageCircleIcon size="28" /><span>Chats</span></div>
@@ -35,11 +45,19 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import AiChatHistory from './AiChatHistory.vue'
-import { Menu as MenuIcon, Home as HomeIcon, MessageCircle as MessageCircleIcon, User as UserIcon, Users as UsersIcon } from '@lucide/vue'
+import { Menu as MenuIcon, Home as HomeIcon, MessageCircle as MessageCircleIcon, User as UserIcon, Users as UsersIcon, Sparkles as SparklesIcon, UserPlus as UserPlusIcon } from '@lucide/vue'
 import { friendsApi } from '../services/chatApi'
-defineEmits(['openSidebar', 'openChat', 'openAiChat', 'openFriendChat', 'navigate'])
+const emit = defineEmits(['openSidebar', 'openChat', 'openAiChat', 'openFriendChat', 'navigate', 'newFreeMascot', 'newPractice', 'newGroup'])
 const friendConversations = ref([])
+const showNewChat = ref(false)
 const loadingFriends = ref(false)
+function choose(action) {
+  showNewChat.value = false
+  if (action === 'freeMascot') emit('newFreeMascot')
+  if (action === 'practice') emit('newPractice')
+  if (action === 'friends') emit('navigate', 'friends')
+  if (action === 'group') emit('newGroup')
+}
 const avatar = (user) => user?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Amigo')}&background=e0f2fe&color=1c5bf0`
 async function loadFriendConversations() {
   loadingFriends.value = true
@@ -55,7 +73,7 @@ onMounted(loadFriendConversations)
 .app-header { height:64px; display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:#fff; border-bottom:1px solid #e2e8f0; position:relative; }
 .header-title { position:absolute; left:50%; transform:translateX(-50%); margin:0; font-size:18px; color:#1a235c; font-weight:800; }
 .menu-btn { background:none; border:0; color:#1a235c; }
-.content-scroll { flex:1; overflow-y:auto; padding:0 20px 130px; }
+.content-scroll { flex:1; overflow-y:auto; padding:0 20px 210px; }
 .friends-chats { margin: 18px 0; padding:18px; background:#fff; border-radius:20px; box-shadow:0 8px 24px rgba(15,23,42,.05); }
 .section-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 h3 { margin:0; color:#1a235c; font-size:16px; }
@@ -65,6 +83,15 @@ h3 { margin:0; color:#1a235c; font-size:16px; }
 .friend-chat-row img { width:46px; height:46px; border-radius:50%; object-fit:cover; }
 .friend-chat-row div { flex:1; display:grid; gap:2px; }
 .friend-chat-row span { color:#e11d48; font-weight:900; }
+.new-chat-fixed { position:fixed; left:50%; bottom:86px; transform:translateX(-50%); width:min(432px, calc(100% - 36px)); z-index:55; display:grid; gap:10px; }
+.new-chat-button { width:100%; border:0; border-radius:22px; background:#1c5bf0; color:#fff; padding:16px 18px; font-weight:950; font-size:16px; box-shadow:0 18px 38px rgba(28,91,240,.25); }
+.new-chat-menu { background:#fff; border:1px solid #dbeafe; border-radius:24px; padding:10px; box-shadow:0 22px 48px rgba(15,23,42,.16); display:grid; gap:6px; }
+.new-chat-menu button { border:0; background:#fff; border-radius:18px; padding:12px; display:flex; align-items:center; gap:12px; color:#1a235c; text-align:left; }
+.new-chat-menu button:hover { background:#f4f8ff; }
+.new-chat-menu svg { color:#1c5bf0; flex-shrink:0; }
+.new-chat-menu span { display:grid; gap:2px; }
+.new-chat-menu strong { font-size:14px; }
+.new-chat-menu small { font-size:12px; color:#64748b; }
 .bottom-nav { display:flex; justify-content:space-around; align-items:center; height:72px; background:white; border-top:1px solid #e2e8f0; position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; z-index:50; }
 .nav-item { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; color:#94a3b8; cursor:pointer; height:100%; }
 .nav-item.active { color:#1c5bf0; }

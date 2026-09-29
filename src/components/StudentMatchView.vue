@@ -2,17 +2,14 @@
   <div class="match-container" :class="{ waiting: isWaiting }">
     <template v-if="isWaiting">
       <div class="blue-expand"></div>
-      <button class="waiting-back" @click="goBack"><ChevronLeftIcon size="24" /></button>
+      <button type="button" class="waiting-back" @click="goBack"><ChevronLeftIcon size="24" /></button>
       <div class="waiting-top">
         <div class="white-logo">Change Skills</div>
         <span class="waiting-time">{{ queueTime }}</span>
       </div>
       <main class="waiting-content">
-        <div class="loader-card" aria-label="Procurando aluno">
-          <div class="search-orbit">
-            <span></span><span></span><span></span>
-          </div>
-          <div class="loader-center"></div>
+        <div class="arrow-loader" aria-label="Procurando aluno">
+          <RefreshCwIcon size="76" :stroke-width="2.3" />
         </div>
         <div class="waiting-copy">
           <h1>Encontrando alguém para praticar com você</h1>
@@ -26,7 +23,7 @@
 
     <template v-else>
       <header class="match-header">
-        <button class="back-btn" @click="goBack"><ChevronLeftIcon size="24" /></button>
+        <button type="button" class="back-btn" @click="goBack"><ChevronLeftIcon size="24" /></button>
         <div class="partner-title">
           <h2>{{ partnerTitle }}</h2>
           <p v-if="partnerUsername">@{{ partnerUsername }}</p>
@@ -38,7 +35,7 @@
         <section v-if="status === 'ended'" class="search-card">
           <h3>Conversa encerrada</h3>
           <p>Você pode voltar para praticar de novo ou enviar um pedido de amizade para continuar falando depois.</p>
-          <button v-if="partner && !friendRequestSent" class="friend-btn" @click="sendFriendRequest">Adicionar amigo</button>
+          <button v-if="partner && !friendRequestSent" type="button" class="friend-btn" @click="sendFriendRequest">Adicionar amigo</button>
           <span v-if="friendRequestSent" class="sent-label">Pedido de amizade enviado</span>
         </section>
 
@@ -63,7 +60,7 @@
             <SendIcon size="20" />
           </button>
         </form>
-        <button v-if="partner && matched && !friendRequestSent" class="friend-link" @click="sendFriendRequest">Adicionar como amigo</button>
+        <button v-if="partner && matched && !friendRequestSent" type="button" class="friend-link" @click="sendFriendRequest">Adicionar como amigo</button>
         <span v-if="friendRequestSent && matched" class="sent-label small">Pedido de amizade enviado</span>
       </footer>
     </template>
@@ -72,9 +69,9 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { ChevronLeftIcon, SendIcon } from '@lucide/vue'
+import { ChevronLeftIcon, RefreshCwIcon, SendIcon } from '@lucide/vue'
 import { audienceForCourse } from '../data/practiceScenarios.js'
-import { currentUser, getSessionToken, wsUrl } from '../services/chatApi.js'
+import { currentUser, friendsApi, getSessionToken, wsUrl } from '../services/chatApi.js'
 
 const props = defineProps({ language: { type: String, default: 'en' }, courseId: { type: String, default: 'general' } })
 const emit = defineEmits(['goBack'])
@@ -92,6 +89,7 @@ const friendRequestSent = ref(false)
 const scrollRef = ref(null)
 let ws
 let timer
+let leaving = false
 
 const matched = computed(() => status.value === 'matched')
 const isWaiting = computed(() => status.value === 'connecting' || status.value === 'searching')
@@ -149,7 +147,7 @@ async function connect() {
       if (data.type === 'blocked') error.value = data.message || 'Mensagem bloqueada pela moderação.'
       if (data.type === 'error') error.value = data.message || 'Não foi possível continuar.'
     })
-    ws.addEventListener('close', () => { if (status.value !== 'ended') status.value = 'ended' })
+    ws.addEventListener('close', () => { if (!leaving && status.value !== 'ended') status.value = 'ended' })
   } catch (err) {
     error.value = err.message || 'Não foi possível conectar.'
     status.value = 'ended'
@@ -161,10 +159,21 @@ function sendMessage() {
   draft.value = ''
   send({ type: 'message', content })
 }
-function sendFriendRequest() { send({ type: 'addFriend' }) }
+async function sendFriendRequest() {
+  if (friendRequestSent.value || !partner.value?.username) return
+  send({ type: 'addFriend' })
+  try {
+    await friendsApi('', { method: 'POST', body: { username: partner.value.username } })
+    friendRequestSent.value = true
+    error.value = ''
+  } catch (err) {
+    error.value = err.message || 'Não foi possível enviar o pedido de amizade.'
+  }
+}
 function goBack() {
-  ws?.close()
+  leaving = true
   emit('goBack')
+  try { ws?.close() } catch {}
 }
 
 onMounted(() => {
@@ -186,24 +195,17 @@ onBeforeUnmount(() => { clearInterval(timer); ws?.close() })
 .white-logo { color:#fff; font-weight:950; letter-spacing:.01em; font-size:21px; text-shadow:0 8px 24px rgba(0,0,0,.12); }
 .waiting-time { color:#eef4ff; font-weight:900; border:1px solid rgba(255,255,255,.28); background:rgba(255,255,255,.1); border-radius:999px; padding:6px 13px; backdrop-filter:blur(10px); }
 .waiting-content { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:26px 30px 34px; gap:30px; }
-.loader-card { width:156px; height:156px; border-radius:48px; display:flex; align-items:center; justify-content:center; position:relative; background:rgba(255,255,255,.08); box-shadow:inset 0 0 0 1px rgba(255,255,255,.12), 0 24px 70px rgba(0,20,90,.18); backdrop-filter:blur(12px); }
-.loader-center { position:absolute; width:12px; height:12px; border-radius:50%; background:rgba(255,255,255,.8); box-shadow:0 0 34px rgba(255,255,255,.45); animation:centerPulse 1.4s ease-in-out infinite; }
+.arrow-loader { width:142px; height:142px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; animation:spin 1.05s linear infinite; filter:drop-shadow(0 22px 50px rgba(0,20,90,.22)); }
+.arrow-loader::before { content:""; position:absolute; width:116px; height:116px; border-radius:50%; border:2px solid rgba(255,255,255,.24); border-left-color:rgba(255,255,255,.78); }
 .waiting-copy { max-width:360px; display:flex; flex-direction:column; align-items:center; }
 .waiting-content h1 { margin:0; font-size:24px; line-height:1.15; max-width:330px; font-weight:950; letter-spacing:-.035em; }
 .waiting-content p { margin:14px 0 0; max-width:330px; color:#dbeafe; font-size:14px; font-weight:750; line-height:1.45; }
 .waiting-footer { text-align:center; padding:0 20px 28px; color:#dbeafe; font-weight:900; }
-.search-orbit { position:relative; width:104px; height:104px; border-radius:50%; border:2px solid rgba(255,255,255,.26); animation:spin 2.4s linear infinite; }
-.search-orbit::before { content:""; position:absolute; inset:17px; border-radius:50%; border:1px solid rgba(255,255,255,.12); }
-.search-orbit span { position:absolute; border-radius:50%; background:#fff; box-shadow:0 0 24px rgba(255,255,255,.9); }
-.search-orbit span:nth-child(1) { width:18px; height:18px; left:50%; top:-9px; transform:translateX(-50%); }
-.search-orbit span:nth-child(2) { width:16px; height:16px; right:3px; bottom:16px; opacity:.72; }
-.search-orbit span:nth-child(3) { width:12px; height:12px; left:7px; bottom:21px; opacity:.42; }
 @keyframes spin { to { transform:rotate(360deg); } }
-@keyframes centerPulse { 0%,100% { transform:scale(.76); opacity:.48; } 50% { transform:scale(1); opacity:1; } }
 @media (max-width: 380px) {
   .waiting-content { padding-left:24px; padding-right:24px; gap:24px; }
-  .loader-card { width:136px; height:136px; border-radius:40px; }
-  .search-orbit { width:92px; height:92px; }
+  .arrow-loader { width:120px; height:120px; }
+  .arrow-loader::before { width:96px; height:96px; }
   .waiting-content h1 { font-size:21px; max-width:290px; }
   .waiting-content p { font-size:13px; max-width:290px; }
 }
