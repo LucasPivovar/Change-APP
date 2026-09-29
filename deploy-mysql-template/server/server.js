@@ -229,6 +229,20 @@ const tipSets = {
     pt: ['Pergunte: com o que você trabalha?', 'Pergunte: como foi sua última reunião?', 'Pergunte: em que projeto você está trabalhando?']
   }
 };
+
+const forbiddenModerationRules = [
+  { reason: 'palavrões', pattern: /\b(porra|caralho|puta|puto|merda|foda|fodase|foda-se|buceta|cuzao|cuzão|arrombado|cacete|desgracado|desgraçado|idiota|burro)\b/i },
+  { reason: 'conteúdo adulto', pattern: /\b(sexo|sexual|porn|porno|pornografia|nude|nudes|pelado|pelada|tesao|tesão|gozar|boquete|oral|anal|vagina|penis|pênis|buceta|peito|peitos)\b/i },
+  { reason: 'apostas', pattern: /\b(aposta|apostas|bet|bets|cassino|casino|roleta|blackjack|jogo do bicho|tigrinho|fortune tiger|bet365|blaze)\b/i },
+  { reason: 'drogas', pattern: /\b(cocaina|cocaína|maconha|crack|heroina|heroína|lsd|ecstasy|mdma|droga|drogas|trafico|tráfico)\b/i },
+  { reason: 'violência ou ódio', pattern: /\b(matar|morte|estuprar|estupro|racista|nazista|hitler)\b/i }
+];
+function normalizeModerationText(text){ return String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+function moderationProblem(text){
+  const normalized = normalizeModerationText(text);
+  return forbiddenModerationRules.find(rule => rule.pattern.test(normalized) || rule.pattern.test(String(text || '')));
+}
+
 function matchKey(language, audience){ return String(language || 'en') + ':' + String(audience || 'general'); }
 function safeSend(ws, data){ if(ws.readyState === 1) ws.send(JSON.stringify(data)); }
 function randomTip(language, audience){ const group = tipSets[audience] || tipSets.general; const list = group[language] || group.en || tipSets.general.en; return list[Math.floor(Math.random() * list.length)]; }
@@ -296,6 +310,8 @@ function setupPracticeWebSocket(server){
         if(data.type === 'message'){
           const room = roomFor(ws); if(!room || room.ended) return;
           const content = validateText(data.content, 'Mensagem', 1, 1000);
+          const problem = moderationProblem(content);
+          if(problem){ safeSend(ws,{type:'blocked', message:'Mensagem bloqueada para manter o chat seguro e saudável.'}); return; }
           const createdAt = now();
           const message = { id:id(), senderId:user.id, content, createdAt };
           await exec('INSERT INTO practice_messages (id,session_id,sender_id,content,created_at) VALUES (?,?,?,?,?)',[message.id, room.id, user.id, content, createdAt]);

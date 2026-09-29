@@ -1,52 +1,67 @@
 <template>
-  <div class="match-container">
-    <header class="match-header">
-      <button class="back-btn" @click="goBack"><ChevronLeftIcon size="24" /></button>
-      <div>
-        <h2>Conversar com aluno</h2>
-        <p>{{ headerText }}</p>
+  <div class="match-container" :class="{ waiting: isWaiting }">
+    <template v-if="isWaiting">
+      <div class="blue-expand"></div>
+      <button class="waiting-back" @click="goBack"><ChevronLeftIcon size="24" /></button>
+      <div class="waiting-top">
+        <div class="white-logo">Change Skills</div>
+        <span class="waiting-time">{{ queueTime }}</span>
       </div>
-      <div v-if="matched" class="timer">{{ countdown }}</div>
-    </header>
-
-    <main ref="scrollRef" class="match-content">
-      <section v-if="status === 'searching'" class="search-card">
-        <div class="pulse"></div>
-        <h3>Procurando alguém da mesma modalidade</h3>
-        <p>A conversa começa quando outro aluno também estiver procurando. Ela dura 5 minutos.</p>
-      </section>
-
-      <section v-if="status === 'ended'" class="search-card">
-        <h3>Conversa encerrada</h3>
-        <p>Você pode voltar para praticar de novo ou enviar um pedido de amizade para continuar falando depois.</p>
-        <button v-if="partner && !friendRequestSent" class="friend-btn" @click="sendFriendRequest">Adicionar amigo</button>
-        <span v-if="friendRequestSent" class="sent-label">Pedido de amizade enviado</span>
-      </section>
-
-      <div v-for="message in messages" :key="message.id" class="message-row" :class="{ mine: message.senderId === me?.id }">
-        <div class="bubble">
-          <strong v-if="message.senderId !== me?.id">{{ partner?.name || 'Aluno' }}</strong>
-          <span>{{ message.content }}</span>
-          <small>{{ time(message.createdAt) }}</small>
+      <main class="waiting-content">
+        <div class="search-orbit">
+          <span></span><span></span><span></span>
         </div>
-      </div>
-    </main>
+        <h1>Encontrando alguém para praticar com você</h1>
+        <p>Fique por aqui. Assim que outro aluno da mesma modalidade entrar, a conversa começa automaticamente.</p>
+      </main>
+      <footer class="waiting-footer">
+        <span>{{ queueLabel }}</span>
+      </footer>
+    </template>
 
-    <footer class="match-input-area">
-      <div v-if="tip && matched" class="tip-box">
-        <strong>Dica do Camaleão</strong>
-        <span>{{ tip }}</span>
-      </div>
-      <div v-if="error" class="error-box">{{ error }}</div>
-      <form class="input-row" @submit.prevent="sendMessage">
-        <input v-model="draft" :disabled="!matched || status === 'ended'" placeholder="Digite sua mensagem..." />
-        <button :disabled="!draft.trim() || !matched || status === 'ended'" type="submit">
-          <SendIcon size="20" />
-        </button>
-      </form>
-      <button v-if="partner && matched && !friendRequestSent" class="friend-link" @click="sendFriendRequest">Adicionar como amigo</button>
-      <span v-if="friendRequestSent && matched" class="sent-label small">Pedido de amizade enviado</span>
-    </footer>
+    <template v-else>
+      <header class="match-header">
+        <button class="back-btn" @click="goBack"><ChevronLeftIcon size="24" /></button>
+        <div>
+          <h2>Chat em tempo real</h2>
+          <p>{{ headerText }}</p>
+        </div>
+        <div v-if="matched" class="timer">{{ countdown }}</div>
+      </header>
+
+      <main ref="scrollRef" class="match-content">
+        <section v-if="status === 'ended'" class="search-card">
+          <h3>Conversa encerrada</h3>
+          <p>Você pode voltar para praticar de novo ou enviar um pedido de amizade para continuar falando depois.</p>
+          <button v-if="partner && !friendRequestSent" class="friend-btn" @click="sendFriendRequest">Adicionar amigo</button>
+          <span v-if="friendRequestSent" class="sent-label">Pedido de amizade enviado</span>
+        </section>
+
+        <div v-for="message in messages" :key="message.id" class="message-row" :class="{ mine: message.senderId === me?.id }">
+          <div class="bubble">
+            <strong v-if="message.senderId !== me?.id">{{ partner?.name || 'Aluno' }}</strong>
+            <span>{{ message.content }}</span>
+            <small>{{ time(message.createdAt) }}</small>
+          </div>
+        </div>
+      </main>
+
+      <footer class="match-input-area">
+        <div v-if="tip && matched" class="tip-box">
+          <strong>Dica do Camaleão</strong>
+          <span>{{ tip }}</span>
+        </div>
+        <div v-if="error" class="error-box">{{ error }}</div>
+        <form class="input-row" @submit.prevent="sendMessage">
+          <input v-model="draft" :disabled="!matched || status === 'ended'" placeholder="Digite sua mensagem..." />
+          <button :disabled="!draft.trim() || !matched || status === 'ended'" type="submit">
+            <SendIcon size="20" />
+          </button>
+        </form>
+        <button v-if="partner && matched && !friendRequestSent" class="friend-link" @click="sendFriendRequest">Adicionar como amigo</button>
+        <span v-if="friendRequestSent && matched" class="sent-label small">Pedido de amizade enviado</span>
+      </footer>
+    </template>
   </div>
 </template>
 
@@ -68,12 +83,14 @@ const tip = ref('')
 const error = ref('')
 const endsAt = ref(null)
 const nowTick = ref(Date.now())
+const startedAt = ref(Date.now())
 const friendRequestSent = ref(false)
 const scrollRef = ref(null)
 let ws
 let timer
 
 const matched = computed(() => status.value === 'matched')
+const isWaiting = computed(() => status.value === 'connecting' || status.value === 'searching')
 const headerText = computed(() => {
   if (status.value === 'matched') return partner.value ? `Você está falando com ${partner.value.name}` : 'Conversa em andamento'
   if (status.value === 'ended') return 'A sessão de 5 minutos terminou'
@@ -85,6 +102,18 @@ const countdown = computed(() => {
   const total = Math.ceil(remaining / 1000)
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
 })
+const queueTime = computed(() => {
+  const elapsed = Math.max(0, Math.floor((nowTick.value - startedAt.value) / 1000))
+  return `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`
+})
+const queueLabel = computed(() => {
+  const audience = audienceForCourse(props.courseId)
+  if (audience === 'kids') return 'Fila Kids'
+  if (audience === 'teens') return 'Fila Teens'
+  if (audience === 'business') return 'Fila Business'
+  if (audience === 'researchers') return 'Fila Acadêmico'
+  return 'Fila de prática'
+})
 const scrollBottom = () => nextTick(() => { if (scrollRef.value) scrollRef.value.scrollTop = scrollRef.value.scrollHeight })
 const time = (value) => value ? new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
 
@@ -93,6 +122,7 @@ function send(payload) {
 }
 async function connect() {
   try {
+    startedAt.value = Date.now()
     const token = await getSessionToken()
     ws = new WebSocket(`${wsUrl('/ws')}?token=${encodeURIComponent(token)}`)
     ws.addEventListener('message', (event) => {
@@ -104,16 +134,19 @@ async function connect() {
       if (data.type === 'searching') { status.value = 'searching'; tip.value = data.tip || '' }
       if (data.type === 'matched') {
         status.value = 'matched'
+        error.value = ''
         partner.value = data.partner
         endsAt.value = data.endsAt
         tip.value = data.tip || ''
         friendRequestSent.value = false
+        scrollBottom()
       }
       if (data.type === 'message') { messages.value.push(data.message); scrollBottom() }
       if (data.type === 'tip') tip.value = data.tip || ''
       if (data.type === 'friendRequestSent') friendRequestSent.value = true
       if (data.type === 'partnerLeft') error.value = 'A outra pessoa saiu da conversa.'
       if (data.type === 'ended') status.value = 'ended'
+      if (data.type === 'blocked') error.value = data.message || 'Mensagem bloqueada pela moderação.'
       if (data.type === 'error') error.value = data.message || 'Não foi possível continuar.'
     })
     ws.addEventListener('close', () => { if (status.value !== 'ended') status.value = 'ended' })
@@ -142,7 +175,25 @@ onBeforeUnmount(() => { clearInterval(timer); ws?.close() })
 </script>
 
 <style scoped>
-.match-container { position:absolute; inset:0; z-index:56; background:#f4f8ff; display:flex; flex-direction:column; }
+.match-container { position:absolute; inset:0; z-index:56; background:#f4f8ff; display:flex; flex-direction:column; overflow:hidden; }
+.match-container.waiting { background:#1c5bf0; color:#fff; justify-content:space-between; }
+.blue-expand { position:absolute; width:36px; height:36px; border-radius:50%; background:#1c5bf0; left:50%; top:50%; transform:translate(-50%,-50%); animation:expandBlue .55s ease-out forwards; z-index:0; }
+@keyframes expandBlue { from { transform:translate(-50%,-50%) scale(1); } to { transform:translate(-50%,-50%) scale(60); } }
+.waiting-top, .waiting-content, .waiting-footer, .waiting-back { position:relative; z-index:1; }
+.waiting-back { position:absolute; left:18px; top:18px; border:0; background:rgba(255,255,255,.16); color:#fff; width:42px; height:42px; border-radius:15px; display:flex; align-items:center; justify-content:center; }
+.waiting-top { padding-top:26px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+.white-logo { color:#fff; font-weight:950; letter-spacing:.02em; font-size:22px; }
+.waiting-time { color:#dbeafe; font-weight:900; border:1px solid rgba(255,255,255,.32); border-radius:999px; padding:6px 12px; }
+.waiting-content { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 28px; }
+.waiting-content h1 { margin:30px 0 10px; font-size:26px; line-height:1.15; max-width:360px; }
+.waiting-content p { margin:0; max-width:360px; color:#dbeafe; font-size:14px; font-weight:700; line-height:1.5; }
+.waiting-footer { text-align:center; padding:0 20px 30px; color:#dbeafe; font-weight:900; }
+.search-orbit { position:relative; width:118px; height:118px; border-radius:50%; border:2px solid rgba(255,255,255,.25); animation:spin 2.2s linear infinite; }
+.search-orbit span { position:absolute; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 0 24px rgba(255,255,255,.9); }
+.search-orbit span:nth-child(1) { left:50%; top:-9px; transform:translateX(-50%); }
+.search-orbit span:nth-child(2) { right:4px; bottom:18px; opacity:.7; }
+.search-orbit span:nth-child(3) { left:4px; bottom:18px; opacity:.45; }
+@keyframes spin { to { transform:rotate(360deg); } }
 .match-header { background:#fff; border-bottom:1px solid #e2e8f0; padding:16px 18px; display:flex; align-items:center; gap:12px; }
 .back-btn { border:0; background:#eef4ff; color:#1c5bf0; width:40px; height:40px; border-radius:14px; display:flex; align-items:center; justify-content:center; }
 h2 { margin:0; color:#1a235c; font-size:19px; font-weight:900; }
@@ -151,8 +202,6 @@ p { margin:3px 0 0; color:#64748b; font-size:12px; font-weight:700; }
 .match-content { flex:1; overflow:auto; padding:18px; display:flex; flex-direction:column; gap:12px; }
 .search-card { background:#fff; border:1px solid #dbeafe; border-radius:24px; padding:22px; box-shadow:0 8px 24px rgba(28,91,240,.06); text-align:center; }
 .search-card h3 { margin:10px 0 6px; color:#1a235c; font-size:18px; }
-.pulse { width:40px; height:40px; margin:0 auto; border-radius:50%; background:#1c5bf0; animation:pulse 1.2s infinite ease-in-out; }
-@keyframes pulse { 0%,100% { transform:scale(.75); opacity:.55 } 50% { transform:scale(1); opacity:1 } }
 .message-row { display:flex; justify-content:flex-start; }
 .message-row.mine { justify-content:flex-end; }
 .bubble { max-width:78%; background:#fff; border:1px solid #dbeafe; border-radius:18px 18px 18px 6px; padding:10px 12px; color:#1f2937; display:flex; flex-direction:column; gap:4px; box-shadow:0 6px 16px rgba(15,23,42,.04); }

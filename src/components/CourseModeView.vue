@@ -36,8 +36,8 @@
                 <UsersIcon size="28" stroke-width="2.5" />
               </div>
               <div class="option-text">
-                <h3>Conversar com aluno</h3>
-                <p>Faça match com alguém da mesma modalidade por 5 minutos.</p>
+                <h3>Chat em tempo real</h3>
+                <p>Encontre outro aluno da mesma modalidade para conversar por 5 minutos.</p>
               </div>
               <ChevronRightIcon class="arrow-icon" size="24" stroke-width="2.5" />
             </div>
