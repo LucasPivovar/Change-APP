@@ -10,7 +10,8 @@
     "backend:dev": "npm --prefix backend run dev",
     "backend:build": "npm --prefix backend run build",
     "backend:test": "npm --prefix backend test",
-    "hostinger:build": "npm run build && node scripts/build-hostinger.cjs"
+    "hostinger:build": "npm run build && node scripts/build-hostinger.cjs",
+    "mysql:build": "npm run build && node scripts/build-mysql-deploy.cjs"
   },
   "dependencies": {
     "@lucide/vue": "^1.17.0",

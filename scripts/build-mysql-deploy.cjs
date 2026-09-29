@@ -1,0 +1,11 @@
+const fs = require('fs');
+const path = require('path');
+const root = process.cwd();
+const out = path.join(root, 'deploy', 'mysql');
+fs.rmSync(out, { recursive: true, force: true });
+fs.mkdirSync(path.join(out, 'client'), { recursive: true });
+fs.mkdirSync(path.join(out, 'server'), { recursive: true });
+fs.cpSync(path.join(root, 'dist'), path.join(out, 'client', 'dist'), { recursive: true });
+fs.cpSync(path.join(root, 'deploy-mysql-template', 'server'), path.join(out, 'server'), { recursive: true });
+fs.writeFileSync(path.join(out, 'README.txt'), 'client/dist = frontend build\nserver = backend Node MySQL\nNginx deve servir client/dist e proxy /api para 127.0.0.1:3001\n', 'utf8');
+console.log(out);

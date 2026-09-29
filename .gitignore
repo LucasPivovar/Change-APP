@@ -40,3 +40,7 @@ deploy/hostinger/server.js
 deploy/hostinger/package.json
 deploy/hostinger/.env.example
 
+
+# Generated MySQL deploy package
+deploy/mysql/
+
