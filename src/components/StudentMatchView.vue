@@ -2,7 +2,7 @@
   <div class="match-container" :class="{ waiting: isWaiting }">
     <template v-if="isWaiting">
       <div class="blue-expand"></div>
-      <button type="button" class="waiting-back" @click="goBack"><ChevronLeftIcon size="24" /></button>
+      <button type="button" class="waiting-back" @pointerdown.stop.prevent="goBack" @click.stop.prevent="goBack"><ChevronLeftIcon size="24" /></button>
       <div class="waiting-top">
         <div class="white-logo">Change Skills</div>
         <span class="waiting-time">{{ queueTime }}</span>
@@ -191,11 +191,11 @@ onBeforeUnmount(() => { clearInterval(timer); ws?.close() })
 <style scoped>
 .match-container { position:fixed; inset:0; z-index:56; height:100dvh; max-height:100dvh; background:#f4f8ff; display:flex; flex-direction:column; overflow:hidden; overscroll-behavior:none; }
 .match-container.waiting { background:linear-gradient(180deg,#1f63f4 0%,#1753df 100%); color:#fff; justify-content:space-between; }
-.blue-expand { position:absolute; width:44px; height:44px; border-radius:50%; background:#1f63f4; left:50%; top:50%; transform:translate(-50%,-50%); animation:expandBlue .5s ease-out forwards; z-index:0; }
-.match-container.waiting::before { content:""; position:absolute; inset:-25%; background:radial-gradient(circle at 50% 22%, rgba(255,255,255,.22), transparent 34%), radial-gradient(circle at 12% 86%, rgba(125,162,255,.2), transparent 28%); z-index:0; }
+.blue-expand { position:absolute; width:44px; height:44px; border-radius:50%; background:#1f63f4; left:50%; top:50%; transform:translate(-50%,-50%); animation:expandBlue .5s ease-out forwards; z-index:0; pointer-events:none; }
+.match-container.waiting::before { content:""; position:absolute; inset:-25%; background:radial-gradient(circle at 50% 22%, rgba(255,255,255,.22), transparent 34%), radial-gradient(circle at 12% 86%, rgba(125,162,255,.2), transparent 28%); z-index:0; pointer-events:none; }
 @keyframes expandBlue { from { transform:translate(-50%,-50%) scale(1); } to { transform:translate(-50%,-50%) scale(62); } }
 .waiting-top, .waiting-content, .waiting-footer, .waiting-back { position:relative; z-index:1; }
-.waiting-back { position:absolute; left:18px; top:18px; border:0; background:rgba(255,255,255,.16); color:#fff; width:42px; height:42px; border-radius:15px; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(10px); }
+.waiting-back { position:absolute; left:18px; top:18px; border:0; background:rgba(255,255,255,.16); color:#fff; width:52px; height:52px; border-radius:18px; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(10px); z-index:20; pointer-events:auto; touch-action:manipulation; cursor:pointer; }
 .waiting-top { padding-top:28px; display:flex; flex-direction:column; align-items:center; gap:10px; }
 .white-logo { color:#fff; font-weight:950; letter-spacing:.01em; font-size:21px; text-shadow:0 8px 24px rgba(0,0,0,.12); }
 .waiting-time { color:#eef4ff; font-weight:900; border:1px solid rgba(255,255,255,.28); background:rgba(255,255,255,.1); border-radius:999px; padding:6px 13px; backdrop-filter:blur(10px); }
