@@ -3,8 +3,8 @@
     <header class="scenario-header">
       <button class="back-btn" @click="$emit('goBack')"><ChevronLeftIcon size="24" /></button>
       <div>
-        <h2>Escolha uma prática</h2>
-        <p>O Camaleão entra no papel da situação e te avalia no fim.</p>
+        <h2>Práticas do dia</h2>
+        <p>As situações mudam todos os dias à meia-noite.</p>
       </div>
     </header>
 
@@ -34,7 +34,7 @@ import { scenarioScoreKey, scenariosForCourse } from '../data/practiceScenarios.
 
 const props = defineProps({ language: { type: String, default: 'en' }, courseId: { type: String, default: 'general' } })
 defineEmits(['goBack', 'selectScenario'])
-const scenarios = computed(() => scenariosForCourse(props.courseId))
+const scenarios = computed(() => scenariosForCourse(props.courseId, props.language))
 const scoreFor = (id) => Number(localStorage.getItem(scenarioScoreKey(props.language, props.courseId, id)) || 0)
 const stars = (score) => '★'.repeat(score) + '☆'.repeat(Math.max(0, 5 - score))
 </script>
