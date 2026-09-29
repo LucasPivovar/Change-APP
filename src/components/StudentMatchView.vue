@@ -144,8 +144,8 @@ async function connect() {
       if (data.type === 'message') { messages.value.push(data.message); scrollBottom() }
       if (data.type === 'tip' && data.tip) { messages.value.push({ id: `tip-${Date.now()}-${Math.random()}`, role: 'tip', content: data.tip, createdAt: new Date().toISOString() }); scrollBottom() }
       if (data.type === 'friendRequestSent') friendRequestSent.value = true
-      if (data.type === 'partnerLeft') error.value = 'A outra pessoa saiu da conversa.'
-      if (data.type === 'ended') status.value = 'ended'
+      if (data.type === 'partnerLeft') { error.value = 'A outra pessoa saiu da conversa.'; status.value = 'ended'; ws?.close() }
+      if (data.type === 'ended') { status.value = 'ended'; ws?.close() }
       if (data.type === 'blocked') error.value = data.message || 'Mensagem bloqueada pela moderação.'
       if (data.type === 'error') error.value = data.message || 'Não foi possível continuar.'
     })

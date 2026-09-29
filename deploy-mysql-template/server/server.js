@@ -260,6 +260,27 @@ async function wsUserFromRequest(req){
   return one('SELECT * FROM users WHERE id = ?', [session.user_id]);
 }
 function roomFor(socket){ return socket.practiceRoomId ? practiceRooms.get(socket.practiceRoomId) : null; }
+function idleNotice(language, audience){
+  const notices = {
+    en: 'You have been quiet for 40 seconds. Try asking: How are you?',
+    es: 'Ustedes ficaram 40 segundos sem falar. Tente perguntar: ¿Cómo estás?',
+    fr: 'Vous êtes silencieux depuis 40 secondes. Essaie de demander: Comment ça va?',
+    pt: 'Vocês ficaram 40 segundos sem falar. Tente perguntar: Como você está?'
+  };
+  if (audience === 'kids' && language === 'en') return 'You have been quiet for 40 seconds. Ask: What is your favorite game?';
+  return notices[language] || notices.en;
+}
+function armIdleNotice(room){
+  clearTimeout(room.idleTimeout);
+  room.idleTimeout = setTimeout(() => {
+    if (!room.ended) {
+      const tip = idleNotice(room.language, room.audience);
+      for (const client of room.clients) safeSend(client, { type:'tip', tip });
+      armIdleNotice(room);
+    }
+  }, 40 * 1000);
+}
+
 async function endPracticeRoom(roomId){
   const room = practiceRooms.get(roomId);
   if(!room) return;
@@ -267,6 +288,7 @@ async function endPracticeRoom(roomId){
   const endedAt = now();
   await exec('UPDATE practice_sessions SET ended_at=? WHERE id=? AND ended_at IS NULL',[endedAt, roomId]).catch(()=>{});
   clearTimeout(room.timeout);
+  clearTimeout(room.idleTimeout);
   for(const client of room.clients){ safeSend(client, { type:'ended', endedAt }); client.practiceRoomId = null; }
   practiceRooms.delete(roomId);
 }
@@ -275,11 +297,12 @@ async function makeMatch(a, b, language, audience){
   const startedAt = now();
   const endsAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
   await exec('INSERT INTO practice_sessions (id,language,audience,user_a_id,user_b_id,started_at,ends_at,ended_at) VALUES (?,?,?,?,?,?,?,NULL)', [roomId, language, audience, a.user.id, b.user.id, startedAt, endsAt]);
-  const room = { id: roomId, language, audience, clients: [a.ws, b.ws], users: new Map([[a.ws, a.user], [b.ws, b.user]]), endsAt, timeout: setTimeout(() => endPracticeRoom(roomId), 5 * 60 * 1000), ended: false };
+  const room = { id: roomId, language, audience, clients: [a.ws, b.ws], users: new Map([[a.ws, a.user], [b.ws, b.user]]), endsAt, timeout: setTimeout(() => endPracticeRoom(roomId), 5 * 60 * 1000), idleTimeout: null, ended: false };
   practiceRooms.set(roomId, room);
   a.ws.practiceRoomId = roomId; b.ws.practiceRoomId = roomId;
   safeSend(a.ws, { type:'matched', roomId, endsAt, partner: friendUser(b.user), tip: randomTip(language, audience) });
   safeSend(b.ws, { type:'matched', roomId, endsAt, partner: friendUser(a.user), tip: randomTip(language, audience) });
+  armIdleNotice(room);
 }
 function setupPracticeWebSocket(server){
   const wss = new WebSocketServer({ noServer: true });
@@ -309,6 +332,7 @@ function setupPracticeWebSocket(server){
         }
         if(data.type === 'message'){
           const room = roomFor(ws); if(!room || room.ended) return;
+          armIdleNotice(room);
           const content = validateText(data.content, 'Mensagem', 1, 1000);
           const problem = moderationProblem(content);
           if(problem){ safeSend(ws,{type:'blocked', message:'Mensagem bloqueada para manter o chat seguro e saudável.'}); return; }
