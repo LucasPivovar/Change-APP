@@ -13,7 +13,7 @@
         <p v-if="error" class="error">{{ error }}</p>
         <div v-for="person in results" :key="person.id" class="person-row">
           <img :src="avatar(person)" />
-          <div><strong>{{ person.name }}</strong><small>@{{ person.username }} · {{ languageLabel(person.defaultLanguage) }}</small></div>
+          <div><strong>{{ person.name }}</strong><small>@{{ person.username }} <span class="language-flag" :title="languageLabel(person.defaultLanguage)">{{ languageFlag(person.defaultLanguage) }}</span></small></div>
           <button v-if="person.requestReceived" @click="acceptSearch(person)">Aceitar</button>
           <button v-else :disabled="person.isFriend || person.requestSent" @click="add(person)">{{ person.isFriend ? 'Amigo' : person.requestSent ? 'Enviado' : 'Adicionar' }}</button>
         </div>
@@ -23,7 +23,7 @@
         <h3>Pedidos recebidos</h3>
         <div v-for="request in incoming" :key="request.requestId" class="person-row">
           <img :src="avatar(request)" />
-          <div><strong>{{ request.name }}</strong><small>@{{ request.username }} · {{ languageLabel(request.defaultLanguage) }}</small></div>
+          <div><strong>{{ request.name }}</strong><small>@{{ request.username }} <span class="language-flag" :title="languageLabel(request.defaultLanguage)">{{ languageFlag(request.defaultLanguage) }}</span></small></div>
           <button @click="accept(request)">Aceitar</button>
         </div>
       </section>
@@ -32,7 +32,7 @@
         <h3>Pedidos enviados</h3>
         <div v-for="request in outgoing" :key="request.requestId" class="person-row muted-row">
           <img :src="avatar(request)" />
-          <div><strong>{{ request.name }}</strong><small>@{{ request.username }} · aguardando aceite</small></div>
+          <div><strong>{{ request.name }}</strong><small>@{{ request.username }} <span class="language-flag" :title="languageLabel(request.defaultLanguage)">{{ languageFlag(request.defaultLanguage) }}</span> · aguardando aceite</small></div>
           <span class="pending">Enviado</span>
         </div>
       </section>
@@ -43,7 +43,7 @@
         <p v-else-if="!friends.length" class="muted">Você ainda não adicionou amigos.</p>
         <button v-for="friend in friends" :key="friend.id" class="friend-row" @click="openChat(friend)">
           <img :src="avatar(friend)" />
-          <div class="friend-main"><strong>{{ friend.name }}</strong><small>@{{ friend.username }} · {{ languageLabel(friend.defaultLanguage) }}</small></div>
+          <div class="friend-main"><strong>{{ friend.name }}</strong><small>@{{ friend.username }} <span class="language-flag" :title="languageLabel(friend.defaultLanguage)">{{ languageFlag(friend.defaultLanguage) }}</span></small></div>
           <span v-if="friend.streakDays" class="streak">🔥 {{ friend.streakDays }}d</span>
         </button>
       </section>
@@ -69,6 +69,7 @@ const outgoing = ref([])
 const loading = ref(false)
 const error = ref('')
 const languageLabel = (code) => ({ pt: 'Português', en: 'English', es: 'Español', fr: 'Français' }[code] || 'Idioma padrão')
+const languageFlag = (code) => ({ pt: '🇧🇷', en: '🇺🇸', es: '🇪🇸', fr: '🇫🇷' }[code] || '🌐')
 let searchTimer = null
 const avatar = (user) => user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.username)}&background=e0f2fe&color=1c5bf0`
 async function loadFriends() {
@@ -147,6 +148,7 @@ button { border:0; border-radius:14px; background:#1c5bf0; color:#fff; font-weig
 .person-row img, .friend-row img { width:46px; height:46px; border-radius:50%; object-fit:cover; }
 .person-row div, .friend-main { flex:1; display:grid; gap:2px; min-width:0; }
 small, .muted { color:#64748b; }
+.language-flag { display:inline-flex; align-items:center; justify-content:center; margin-left:5px; font-size:15px; line-height:1; vertical-align:-1px; }
 .person-row button:disabled { background:#e2e8f0; color:#64748b; }
 .pending { color:#64748b; font-weight:800; font-size:12px; }
 .streak { color:#e11d48; font-weight:900; }
