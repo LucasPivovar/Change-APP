@@ -75,3 +75,4 @@ export async function profileApi(options = {}) {
 }
 
 export const friendsApi = (path = '', options = {}) => chatApi(`/friends${path}`, options)
+export const groupsApi = (path = '', options = {}) => chatApi(`/groups${path}`, options)

@@ -79,6 +79,35 @@ export class DatabaseService implements OnModuleDestroy {
         created_at TEXT NOT NULL
       );
       CREATE INDEX IF NOT EXISTS friend_messages_conversation ON friend_messages(conversation_id, sequence);
+      CREATE TABLE IF NOT EXISTS groups (
+        id TEXT PRIMARY KEY,
+        owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        invite_code TEXT NOT NULL UNIQUE,
+        max_members INTEGER NOT NULL DEFAULT 10,
+        is_public INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS groups_updated ON groups(updated_at DESC);
+      CREATE TABLE IF NOT EXISTS group_members (
+        id TEXT PRIMARY KEY,
+        group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role TEXT NOT NULL DEFAULT 'member',
+        joined_at TEXT NOT NULL,
+        UNIQUE(group_id, user_id)
+      );
+      CREATE INDEX IF NOT EXISTS group_members_user ON group_members(user_id, joined_at DESC);
+      CREATE TABLE IF NOT EXISTS group_messages (
+        sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+        id TEXT NOT NULL UNIQUE,
+        group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+        sender_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS group_messages_group ON group_messages(group_id, sequence);
     `);
     this.migrate();
   }

@@ -26,6 +26,8 @@ const selectedCourse = ref(null)
 const isSidebarOpen = ref(false)
 const activeAiChatId = ref(null)
 const activeFriendConversationId = ref(null)
+const activeGroupId = ref(null)
+const inviteGroupCode = ref(new URLSearchParams(window.location.search).get('group'))
 const selectedScenario = ref(null)
 const openAiChat = (id) => {
   if (!id) {
@@ -42,6 +44,12 @@ const openFriendChat = (id) => {
   activeFriendConversationId.value = id
   currentForm.value = 'friend-chat'
 }
+const openGroupChat = (id) => {
+  activeGroupId.value = id
+  inviteGroupCode.value = null
+  currentForm.value = 'group-chat'
+}
+if (inviteGroupCode.value && currentUser()) currentForm.value = 'group-chat'
 
 const handleLanguageSelect = (lang) => {
   selectedLanguage.value = lang
@@ -57,6 +65,8 @@ const handleModeSelect = (mode) => {
   if (mode === 'solo') {
     currentForm.value = 'friends'
   } else if (mode === 'group') {
+    activeGroupId.value = null
+    inviteGroupCode.value = null
     currentForm.value = 'group-chat'
   } else if (mode === 'mascot') {
     activeAiChatId.value = null
@@ -171,6 +181,9 @@ const handleGoBack = () => {
   <transition name="fade">
     <GroupChatView 
       v-if="currentForm === 'group-chat'" 
+      :groupId="activeGroupId"
+      :inviteCode="inviteGroupCode"
+      @openGroup="openGroupChat"
       @goBack="handleGoBack"
     />
   </transition>
