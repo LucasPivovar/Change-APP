@@ -1,0 +1,13 @@
+const fs = require('fs');
+const path = require('path');
+const root = process.cwd();
+const out = path.join(root, 'deploy', 'hostinger');
+fs.rmSync(out, { recursive: true, force: true });
+fs.mkdirSync(out, { recursive: true });
+fs.cpSync(path.join(root, 'hostinger', 'server.js'), path.join(out, 'server.js'));
+fs.cpSync(path.join(root, 'hostinger', 'package.json'), path.join(out, 'package.json'));
+fs.cpSync(path.join(root, 'hostinger', '.env.example'), path.join(out, '.env.example'));
+fs.cpSync(path.join(root, 'dist'), path.join(out, 'public'), { recursive: true });
+fs.mkdirSync(path.join(out, 'data'), { recursive: true });
+fs.writeFileSync(path.join(out, 'README.txt'), `CHANGE APP - Hostinger\n\n1. Suba todos os arquivos desta pasta para a aplicação Node da Hostinger.\n2. Copie .env.example para .env e preencha GROQ_API_KEY.\n3. No painel da Hostinger, configure o arquivo inicial como server.js.\n4. Rode npm install se o painel pedir. Este pacote não tem dependências externas.\n5. Inicie a aplicação.\n\nO site abre em / e a API roda em /api.\nO banco fica em data/db.json. Faça backup desse arquivo.\n`, 'utf8');
+console.log(`Pacote criado em ${out}`);

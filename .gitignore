@@ -31,3 +31,12 @@ backend/data/
 *.njsproj
 *.sln
 *.sw?
+
+# Generated Hostinger package
+deploy/hostinger/public/
+deploy/hostinger/data/
+deploy/hostinger/README.txt
+deploy/hostinger/server.js
+deploy/hostinger/package.json
+deploy/hostinger/.env.example
+
