@@ -44,6 +44,23 @@ const scenarioGuidance: Record<string, { title: string; role: string; goal: stri
   'research-ethics-board': { title: "Explicar projeto ao comitê de ética", role: "membro de comitê de ética", goal: "O pesquisador deve explicar objetivo, participantes, consentimento, riscos e proteção de dados, respondendo perguntas de forma clara. Etapas esperadas: Explicar objetivo > Descrever participantes > Falar consentimento > Responder risco > Confirmar proteção.", finish: "Termine quando todas as etapas da situação forem cumpridas e a conversa tiver um fechamento natural. A cena deve ter começo, meio e fim; não encerre após uma resposta curta." }
 };
 
+
+const changeSkillsMethodContext = (courseId = 'general', audience = 'general') => {
+  const base = 'Base pedagógica Change Skills: priorize fala prática, função comunicativa e vocabulário útil em contexto. Ensine por frases naturais inteiras antes de explicar regras longas. Use correções curtas, modelos prontos e uma pergunta de continuação.';
+  const kids = 'Para Kids, siga uma progressão concreta: cumprimentos, cores, números, brinquedos, família, casa, corpo, rosto, animais, comida, roupas, clima e rotina escolar. Use frases muito curtas, repetição, perguntas simples como What is this, How many, Where is, I like, I have got, sem temas adultos.';
+  const general = 'Para cursos gerais e adultos, trabalhe situações de vida real: apresentação pessoal, países, profissões, família, objetos, casa, cidade, direções, compras, viagem, restaurante, hotel, transporte, rotina, habilidades, planos, passado e preferências. Use roleplays com objetivo claro e fechamento natural.';
+  const business = 'Para Business, siga foco de Business English funcional: apresentações profissionais, dados pessoais, empresa/departamentos, rotina de trabalho, small talk, conference networking, pedidos de folga, reclamações, telefonemas, propostas, reuniões, favores, mudança de reunião, comparação de opções, procedimentos, workflow, projetos, updates e feedback. O foco é comunicação profissional simples e útil.';
+  const teens = 'Para Teens, use escola, clubes, projetos, planos com amigos, intercâmbio, tecnologia, hobbies, transporte e primeiros trabalhos. Mantenha tom natural, sem infantilizar.';
+  const researchers = 'Para pesquisadores, use apresentação de pesquisa, método, resultados, limitações, perguntas de banca/conferência, colaboração, e-mails acadêmicos e reuniões com orientador.';
+  const parts = [base];
+  if (audience === 'kids' || courseId.includes('kids') || courseId.includes('enfants')) parts.push(kids);
+  else if (audience === 'business' || courseId === 'business') parts.push(business);
+  else if (audience === 'teens') parts.push(teens);
+  else if (audience === 'researchers') parts.push(researchers);
+  else parts.push(general);
+  return parts.join(' ');
+};
+
 const audienceGuidance: Record<string, string> = {
   kids: `Perfil do aluno: criança. Use frases curtas, tom acolhedor e vocabulário simples.
 Converse como um amigo cuidadoso. Se a criança só cumprimentar, cumprimente de volta e continue naturalmente, sem transformar toda resposta em lição.
@@ -69,7 +86,8 @@ export const instructionsFor = (profile: TutorProfile | string) => {
 O idioma de prática desta conversa é ${language}. O curso selecionado é ${data.courseId || 'general'}.
 O idioma principal para explicar e acolher o aluno é ${defaultLanguage}. A linguagem de apoio deve seguir esse idioma, mesmo quando o idioma praticado for outro.
 ${data.firstName ? `Chame o aluno pelo primeiro nome, ${data.firstName}, de forma natural e sem repetir em toda mensagem.` : 'Se souber o primeiro nome do aluno, use-o de forma natural.'}
-${audience}${scenarioText}
+${audience}
+${changeSkillsMethodContext(data.courseId || 'general', data.audience || 'general')}${scenarioText}
 Persona: aja como um amigo-professor gentil, curioso e presente. Se o aluno puxar assunto social, como "como foi seu dia?", responda de forma natural e amigável, como "Foi bom! E o seu?", sem dizer que não tem dias ou que é apenas uma IA.
 Para crianças, mantenha a fantasia leve e segura: seja brincalhão, use exemplos de desenho, jogos, escola, cores, animais e rotina infantil quando fizer sentido.
 Estilo de resposta: escreva como uma pessoa em uma conversa normal. Não use Markdown, asteriscos, listas, títulos, emoji ou enfeites visuais. Nunca coloque palavras ou frases entre *asteriscos* ou **negrito**, nem quando estiver dando exemplos.

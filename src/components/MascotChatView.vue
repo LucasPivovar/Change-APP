@@ -28,7 +28,7 @@
     <div class="chat-content" ref="messagesListRef" aria-live="polite">
       <p v-if="loading" role="status">Carregando conversa…</p>
       <div v-if="props.scenario" class="scenario-banner">
-        <div><strong>{{ props.scenario.icon }} {{ props.scenario.title }}</strong><span>{{ props.scenario.description }}</span></div>
+        <div><strong>{{ props.scenario.title }}</strong><span>{{ props.scenario.description }}</span></div>
         <button type="button" :disabled="evaluating" @click="finishScenario">Finalizar prática</button>
       </div>
       <p v-else-if="ready && !messages.length && !sending" class="empty-chat">Olá! Sou o Camaleão IA. Sobre o que vamos conversar para praticar seu idioma?</p>
@@ -1037,3 +1037,4 @@ onMounted(initialize)
 .evaluation-card .secondary { background:#eef4ff; color:#1c5bf0; }
 .cooldown-msg { display:block; padding:6px 10px 0; color:#64748b; font-weight:700; font-size:11px; }
 </style>
+
