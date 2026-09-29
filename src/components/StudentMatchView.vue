@@ -27,9 +27,9 @@
     <template v-else>
       <header class="match-header">
         <button class="back-btn" @click="goBack"><ChevronLeftIcon size="24" /></button>
-        <div>
-          <h2>Chat em tempo real</h2>
-          <p>{{ headerText }}</p>
+        <div class="partner-title">
+          <h2>{{ partnerTitle }}</h2>
+          <p v-if="partnerUsername">@{{ partnerUsername }}</p>
         </div>
         <div v-if="matched" class="timer">{{ countdown }}</div>
       </header>
@@ -42,8 +42,12 @@
           <span v-if="friendRequestSent" class="sent-label">Pedido de amizade enviado</span>
         </section>
 
-        <div v-for="message in messages" :key="message.id" class="message-row" :class="{ mine: message.senderId === me?.id }">
-          <div class="bubble">
+        <div v-for="message in messages" :key="message.id" class="message-row" :class="{ mine: message.senderId === me?.id, tip: message.role === 'tip' }">
+          <div v-if="message.role === 'tip'" class="tip-bubble">
+            <strong>Dica do Camaleão</strong>
+            <span>{{ message.content }}</span>
+          </div>
+          <div v-else class="bubble">
             <strong v-if="message.senderId !== me?.id">{{ partner?.name || 'Aluno' }}</strong>
             <span>{{ message.content }}</span>
             <small>{{ time(message.createdAt) }}</small>
@@ -52,10 +56,6 @@
       </main>
 
       <footer class="match-input-area">
-        <div v-if="tip && matched" class="tip-box">
-          <strong>Dica do Camaleão</strong>
-          <span>{{ tip }}</span>
-        </div>
         <div v-if="error" class="error-box">{{ error }}</div>
         <form class="input-row" @submit.prevent="sendMessage">
           <input v-model="draft" :disabled="!matched || status === 'ended'" placeholder="Digite sua mensagem..." />
@@ -84,7 +84,6 @@ const status = ref('connecting')
 const partner = ref(null)
 const messages = ref([])
 const draft = ref('')
-const tip = ref('')
 const error = ref('')
 const endsAt = ref(null)
 const nowTick = ref(Date.now())
@@ -96,11 +95,8 @@ let timer
 
 const matched = computed(() => status.value === 'matched')
 const isWaiting = computed(() => status.value === 'connecting' || status.value === 'searching')
-const headerText = computed(() => {
-  if (status.value === 'matched') return partner.value ? `Você está falando com ${partner.value.name}` : 'Conversa em andamento'
-  if (status.value === 'ended') return 'A sessão de 5 minutos terminou'
-  return 'Match em tempo real por WebSocket'
-})
+const partnerTitle = computed(() => partner.value?.name || (status.value === 'ended' ? 'Conversa encerrada' : 'Aluno'))
+const partnerUsername = computed(() => partner.value?.username || '')
 const countdown = computed(() => {
   if (!endsAt.value) return '5:00'
   const remaining = Math.max(0, new Date(endsAt.value).getTime() - nowTick.value)
@@ -136,18 +132,17 @@ async function connect() {
         status.value = 'searching'
         send({ type: 'find', language: props.language, audience: audienceForCourse(props.courseId) })
       }
-      if (data.type === 'searching') { status.value = 'searching'; tip.value = data.tip || '' }
+      if (data.type === 'searching') status.value = 'searching'
       if (data.type === 'matched') {
         status.value = 'matched'
         error.value = ''
         partner.value = data.partner
         endsAt.value = data.endsAt
-        tip.value = data.tip || ''
         friendRequestSent.value = false
         scrollBottom()
       }
       if (data.type === 'message') { messages.value.push(data.message); scrollBottom() }
-      if (data.type === 'tip') tip.value = data.tip || ''
+      if (data.type === 'tip' && data.tip) { messages.value.push({ id: `tip-${Date.now()}-${Math.random()}`, role: 'tip', content: data.tip, createdAt: new Date().toISOString() }); scrollBottom() }
       if (data.type === 'friendRequestSent') friendRequestSent.value = true
       if (data.type === 'partnerLeft') error.value = 'A outra pessoa saiu da conversa.'
       if (data.type === 'ended') status.value = 'ended'
@@ -180,7 +175,7 @@ onBeforeUnmount(() => { clearInterval(timer); ws?.close() })
 </script>
 
 <style scoped>
-.match-container { position:absolute; inset:0; z-index:56; background:#f4f8ff; display:flex; flex-direction:column; overflow:hidden; }
+.match-container { position:fixed; inset:0; z-index:56; height:100dvh; max-height:100dvh; background:#f4f8ff; display:flex; flex-direction:column; overflow:hidden; overscroll-behavior:none; }
 .match-container.waiting { background:linear-gradient(180deg,#1f63f4 0%,#1753df 100%); color:#fff; justify-content:space-between; }
 .blue-expand { position:absolute; width:44px; height:44px; border-radius:50%; background:#1f63f4; left:50%; top:50%; transform:translate(-50%,-50%); animation:expandBlue .5s ease-out forwards; z-index:0; }
 .match-container.waiting::before { content:""; position:absolute; inset:-25%; background:radial-gradient(circle at 50% 22%, rgba(255,255,255,.22), transparent 34%), radial-gradient(circle at 12% 86%, rgba(125,162,255,.2), transparent 28%); z-index:0; }
@@ -212,23 +207,26 @@ onBeforeUnmount(() => { clearInterval(timer); ws?.close() })
   .waiting-content h1 { font-size:21px; max-width:290px; }
   .waiting-content p { font-size:13px; max-width:290px; }
 }
-.match-header { background:#fff; border-bottom:1px solid #e2e8f0; padding:16px 18px; display:flex; align-items:center; gap:12px; }
+.match-header { background:#fff; border-bottom:1px solid #e2e8f0; padding:calc(12px + env(safe-area-inset-top)) 18px 12px; display:flex; align-items:center; gap:12px; flex-shrink:0; }
 .back-btn { border:0; background:#eef4ff; color:#1c5bf0; width:40px; height:40px; border-radius:14px; display:flex; align-items:center; justify-content:center; }
-h2 { margin:0; color:#1a235c; font-size:19px; font-weight:900; }
-p { margin:3px 0 0; color:#64748b; font-size:12px; font-weight:700; }
-.timer { margin-left:auto; color:#1c5bf0; background:#eef4ff; border-radius:999px; padding:8px 12px; font-weight:900; }
-.match-content { flex:1; overflow:auto; padding:18px; display:flex; flex-direction:column; gap:12px; }
+.partner-title { flex:1; min-width:0; }
+h2 { margin:0; color:#1a235c; font-size:18px; font-weight:950; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+p { margin:3px 0 0; color:#64748b; font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.timer { margin-left:auto; color:#1c5bf0; background:#eef4ff; border-radius:999px; padding:8px 12px; font-weight:900; flex-shrink:0; }
+.match-content { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; padding:18px; display:flex; flex-direction:column; gap:12px; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
 .search-card { background:#fff; border:1px solid #dbeafe; border-radius:24px; padding:22px; box-shadow:0 8px 24px rgba(28,91,240,.06); text-align:center; }
 .search-card h3 { margin:10px 0 6px; color:#1a235c; font-size:18px; }
 .message-row { display:flex; justify-content:flex-start; }
 .message-row.mine { justify-content:flex-end; }
+.message-row.tip { justify-content:center; }
 .bubble { max-width:78%; background:#fff; border:1px solid #dbeafe; border-radius:18px 18px 18px 6px; padding:10px 12px; color:#1f2937; display:flex; flex-direction:column; gap:4px; box-shadow:0 6px 16px rgba(15,23,42,.04); }
 .mine .bubble { background:#dbe7ff; border-color:#c7d2fe; border-radius:18px 18px 6px 18px; color:#1757e8; }
 .bubble strong { color:#1a235c; font-size:12px; }
 .bubble small { align-self:flex-end; color:#64748b; font-size:10px; }
-.match-input-area { background:#fff; border-top:1px solid #e2e8f0; padding:12px 16px 16px; }
-.tip-box { border:1px solid #bfdbfe; background:#eff6ff; color:#1a235c; border-radius:16px; padding:10px 12px; margin-bottom:10px; display:flex; flex-direction:column; gap:3px; font-size:13px; }
-.tip-box strong { color:#1c5bf0; }
+.tip-bubble { max-width:88%; border:1px solid #bfdbfe; background:#fff; color:#1a235c; border-radius:16px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; font-size:13px; box-shadow:0 8px 22px rgba(28,91,240,.06); }
+.tip-bubble strong { color:#1c5bf0; font-size:12px; }
+.tip-bubble span { color:#334155; line-height:1.35; }
+.match-input-area { background:#fff; border-top:1px solid #e2e8f0; padding:12px 16px calc(16px + env(safe-area-inset-bottom)); flex-shrink:0; }
 .error-box { background:#fff1f2; color:#be123c; border:1px solid #fecdd3; border-radius:14px; padding:9px 12px; margin-bottom:10px; font-size:13px; font-weight:700; }
 .input-row { display:flex; align-items:center; gap:10px; }
 .input-row input { flex:1; border:1px solid #dbeafe; background:#f8fbff; border-radius:999px; padding:14px 16px; outline:0; font-weight:700; color:#1a235c; }
