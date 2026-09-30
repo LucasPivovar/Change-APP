@@ -5,6 +5,7 @@ import HeroSection from './components/HeroSection.vue'
 import LoginForm from './components/LoginForm.vue'
 import RegisterForm from './components/RegisterForm.vue'
 import ForgotPasswordForm from './components/ForgotPasswordForm.vue'
+import ResetPasswordForm from './components/ResetPasswordForm.vue'
 import HomeView from './components/HomeView.vue'
 import CourseModeView from './components/CourseModeView.vue'
 import LanguageCoursesView from './components/LanguageCoursesView.vue'
@@ -19,7 +20,7 @@ import FriendsView from './components/FriendsView.vue'
 import FriendChatView from './components/FriendChatView.vue'
 import PracticeScenarioView from './components/PracticeScenarioView.vue'
 import StudentMatchView from './components/StudentMatchView.vue'
-import { currentUser, logout } from './services/chatApi'
+import { authApi, currentUser, logout } from './services/chatApi'
 
 const currentForm = ref(currentUser() ? 'home' : 'login')
 const selectedLanguage = ref(null)
@@ -28,8 +29,12 @@ const isSidebarOpen = ref(false)
 const activeAiChatId = ref(null)
 const activeFriendConversationId = ref(null)
 const activeGroupId = ref(null)
-const inviteGroupCode = ref(new URLSearchParams(window.location.search).get('group'))
+const urlParams = new URLSearchParams(window.location.search)
+const inviteGroupCode = ref(urlParams.get('group'))
+const verifyEmailToken = ref(urlParams.get('verify'))
+const resetPasswordToken = ref(urlParams.get('reset'))
 const selectedScenario = ref(null)
+const authMessage = ref('')
 const openAiChat = (id) => {
   if (!id) {
     activeAiChatId.value = null
@@ -68,7 +73,14 @@ const startGroupChatFlow = () => {
   inviteGroupCode.value = null
   currentForm.value = 'group-chat'
 }
-if (inviteGroupCode.value && currentUser()) currentForm.value = 'group-chat'
+if (resetPasswordToken.value) currentForm.value = 'reset-password'
+else if (verifyEmailToken.value) currentForm.value = 'verifying-email'
+else if (inviteGroupCode.value && currentUser()) currentForm.value = 'group-chat'
+if (verifyEmailToken.value) {
+  authApi('/auth/verify-email', { token: verifyEmailToken.value })
+    .then(() => { window.history.replaceState({}, '', window.location.pathname); currentForm.value = 'home' })
+    .catch((e) => { authMessage.value = e.message; currentForm.value = 'login' })
+}
 
 const handleLanguageSelect = (lang) => {
   selectedLanguage.value = lang
@@ -140,7 +152,7 @@ const handleGoBack = () => {
     @navigate="handleNavigation"
   />
 
-  <div class="auth-layout" v-if="currentForm === 'login' || currentForm === 'register' || currentForm === 'forgot'">
+  <div class="auth-layout" v-if="currentForm === 'login' || currentForm === 'register' || currentForm === 'forgot' || currentForm === 'reset-password' || currentForm === 'verifying-email'">
     <LanguageSelector />
     <HeroSection />
     

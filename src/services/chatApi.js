@@ -49,9 +49,12 @@ export async function authApi(path, body) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   }))
-  localStorage.setItem(sessionKey, data.token)
-  localStorage.setItem(userKey, JSON.stringify(data.user))
-  return data.user
+  if (data.token && data.user) {
+    localStorage.setItem(sessionKey, data.token)
+    localStorage.setItem(userKey, JSON.stringify(data.user))
+    return data.user
+  }
+  return data
 }
 
 export async function chatApi(path, options = {}) {

@@ -1,7 +1,7 @@
 <template>
   <div class="login-container">
 
-    <form @submit.prevent="handleRecover" class="login-form">
+    <form v-if="!sent" @submit.prevent="handleRecover" class="login-form">
       <p class="description">{{ t('forgot_desc') }}</p>
       
       <div class="input-group">
@@ -9,7 +9,8 @@
         <input type="email" placeholder="Email" v-model="email" required />
       </div>
 
-      <button type="submit" class="btn-primary">{{ t('send_link') }}</button>
+      <button type="submit" class="btn-primary" :disabled="loading">{{ loading ? 'Enviando...' : t('send_link') }}</button>
+      <p v-if="error" class="form-error" role="alert">{{ error }}</p>
 
       <div class="register-link">
         {{ t('remembered_password') }} <a href="#" @click.prevent="$emit('goToLogin')">{{ t('login_btn') }}</a>
@@ -22,6 +23,7 @@
 import { ref } from 'vue'
 import { Mail as MailIcon } from '@lucide/vue'
 import { t } from '../data/translations.js'
+import { authApi } from '../services/chatApi'
 
 defineEmits(['goToLogin'])
 
@@ -45,6 +47,9 @@ const handleRecover = () => {
 
 
 
+.success-card { display:flex; flex-direction:column; gap:14px; text-align:center; color:#475569; }
+.success-card h3 { margin:0; color:#1a235c; font-size:22px; }
+.form-error { margin:0; color:#be123c; background:#fff1f2; border:1px solid #ffe4e6; border-radius:12px; padding:10px 12px; font-size:13px; font-weight:600; }
 .description {
   color: var(--text-light);
   font-size: 14px;

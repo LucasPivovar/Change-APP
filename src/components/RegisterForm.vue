@@ -1,7 +1,7 @@
 <template>
   <div class="login-container">
 
-    <form @submit.prevent="handleRegister" class="login-form">
+    <form v-if="!sent" @submit.prevent="handleRegister" class="login-form">
       <div class="input-group">
         <UserIcon class="input-icon" size="20" />
         <input type="text" :placeholder="t('full_name')" v-model="name" required />
@@ -50,6 +50,8 @@ const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const error = ref('')
+const sent = ref(false)
+const sentEmail = ref('')
 
 const handleRegister = async () => {
   error.value = ''
@@ -151,6 +153,9 @@ const handleRegister = async () => {
   font-weight: 600;
 }
 
+.verify-message { display:flex; flex-direction:column; gap:14px; text-align:center; color:#475569; }
+.verify-message h3 { margin:0; color:#1a235c; font-size:22px; }
+.verify-message p { margin:0; line-height:1.5; }
 .form-error {
   margin: 0;
   color: #be123c;
