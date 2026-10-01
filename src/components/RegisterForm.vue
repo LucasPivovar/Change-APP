@@ -33,6 +33,12 @@
         {{ t('already_have_account') }} <a href="#" @click.prevent="$emit('goToLogin')">{{ t('login_btn') }}</a>
       </div>
     </form>
+
+    <div v-else class="verify-message">
+      <h3>Confirme seu e-mail</h3>
+      <p>Enviamos um link para <strong>{{ sentEmail }}</strong>. Clique nele para ativar sua conta e entrar na plataforma.</p>
+      <button class="btn-primary" @click="$emit('goToLogin')">Voltar para o login</button>
+    </div>
   </div>
 </template>
 
@@ -57,8 +63,13 @@ const handleRegister = async () => {
   error.value = ''
   try {
     const cleanUsername = username.value.replace(/^@+/, '').trim().toLowerCase()
-    const user = await authApi('/auth/register', { name: name.value, username: cleanUsername, email: email.value, password: password.value })
-    emit('registerSuccess', user)
+    const result = await authApi('/auth/register', { name: name.value, username: cleanUsername, email: email.value, password: password.value })
+    if (result?.pendingVerification) {
+      sent.value = true
+      sentEmail.value = result.email || email.value
+      return
+    }
+    emit('registerSuccess', result)
   } catch (e) {
     error.value = e.message
   }
