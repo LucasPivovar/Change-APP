@@ -154,6 +154,7 @@ const handleGoBack = () => {
 
 <template>
   <div v-if="currentForm === 'email-verified-success'" class="verified-success-screen">
+    <img class="verified-brand" src="/email-art/logo.png" alt="Change Skills Idiomas" />
     <div class="verified-success-card">
       <div class="verified-check">✓</div>
       <h1>Sua conta foi confirmada com sucesso</h1>
@@ -168,6 +169,7 @@ const handleGoBack = () => {
 
   <div class="auth-layout" v-if="currentForm === 'login' || currentForm === 'register' || currentForm === 'forgot' || currentForm === 'reset-password' || currentForm === 'verifying-email'">
     <LanguageSelector />
+    <img class="auth-brand" src="/email-art/logo.png" alt="Change Skills Idiomas" />
     <HeroSection />
     
     <transition name="slide-fade" mode="out-in">
@@ -376,7 +378,9 @@ const handleGoBack = () => {
 </style>
 
 <style scoped>
-.verified-success-screen { min-height:100vh; width:100%; background:linear-gradient(160deg,#16a34a,#22c55e); display:grid; place-items:center; padding:24px; }
+.auth-brand { width:170px; height:auto; margin:20px auto 8px; display:block; position:relative; z-index:2; }
+.verified-brand { position:absolute; top:32px; left:50%; transform:translateX(-50%); width:180px; height:auto; }
+.verified-success-screen { position:relative; min-height:100vh; width:100%; background:linear-gradient(160deg,#16a34a,#22c55e); display:grid; place-items:center; padding:24px; }
 .verified-success-card { width:min(420px,100%); padding:34px 26px; text-align:center; color:#fff; animation:success-pop .32s ease both; }
 .verified-check { width:78px; height:78px; margin:0 auto 18px; border-radius:50%; display:grid; place-items:center; border:3px solid #fff; color:#fff; font-size:44px; font-weight:900; }
 .verified-success-card h1 { margin:0 0 10px; font-size:25px; line-height:1.15; }

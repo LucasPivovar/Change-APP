@@ -4,7 +4,7 @@
       <div class="blue-expand"></div>
       <button type="button" class="waiting-back" @touchstart.stop.prevent="goBack" @mousedown.stop.prevent="goBack" @click.stop.prevent="goBack"><ChevronLeftIcon size="24" /></button>
       <div class="waiting-top">
-        <div class="white-logo">Change Skills</div>
+        <img class="white-logo" src="/email-art/logo.png" alt="Change Skills Idiomas" />
         <span class="waiting-time">{{ queueTime }}</span>
       </div>
       <main class="waiting-content">
@@ -249,3 +249,5 @@ p { margin:3px 0 0; color:#64748b; font-size:12px; font-weight:700; overflow:hid
 .sent-label { display:inline-block; margin-top:12px; color:#16a34a; font-weight:900; font-size:13px; }
 .sent-label.small { display:block; text-align:center; margin-top:10px; }
 </style>
+
+<style scoped>img.white-logo { width:180px; height:auto; object-fit:contain; }</style>
