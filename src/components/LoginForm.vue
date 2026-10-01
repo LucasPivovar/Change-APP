@@ -15,9 +15,11 @@
         </button>
       </div>
 
-      <label class="remember-device"><input type="checkbox" v-model="rememberMe" /> Lembrar de mim por 7 dias</label>
+      <div class="login-options">
+      <label class="remember-device"><input type="checkbox" v-model="rememberMe" /> Lembrar de mim</label>
       <div class="forgot-password">
         <a href="#" @click.prevent="$emit('goToForgot')">{{ t('forgot_password') }}</a>
+      </div>
       </div>
 
       <button type="submit" :disabled="loading" class="btn-primary">{{ t('login_btn') }}</button>
@@ -100,7 +102,8 @@ const resetTwoFactor = () => {
 </script>
 
 <style scoped>
-.remember-device { display:flex; align-items:center; gap:8px; color:#475569; font-size:14px; }
+.login-options { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.remember-device { display:flex; align-items:center; gap:6px; color:var(--primary-blue); font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
 .remember-device input { accent-color:#1c5bf0; width:18px; height:18px; }
 .login-container {
   background: white;
@@ -161,14 +164,15 @@ h3 { margin: 0; color: #1a235c; font-size: 22px; text-align: center; }
 }
 
 .forgot-password {
-  text-align: center;
-  margin-top: 8px;
+  text-align: right;
+  margin: 0;
+  white-space: nowrap;
 }
 
 .forgot-password a {
   color: var(--primary-blue);
   text-decoration: none;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
 }
 
