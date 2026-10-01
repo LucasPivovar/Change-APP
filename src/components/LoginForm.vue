@@ -15,6 +15,7 @@
         </button>
       </div>
 
+      <label class="remember-device"><input type="checkbox" v-model="rememberMe" /> Lembrar de mim por 7 dias</label>
       <div class="forgot-password">
         <a href="#" @click.prevent="$emit('goToForgot')">{{ t('forgot_password') }}</a>
       </div>
@@ -29,7 +30,7 @@
 
     <form v-else @submit.prevent="handleVerifyCode" class="login-form">
       <h3>Verifique seu e-mail</h3>
-      <p class="description">Enviamos um código para {{ twoFactorEmail }}. Digite o código para entrar.</p>
+      <p class="description">Enviamos um código para {{ twoFactorEmail }}. Digite o código para entrar. Ele é válido por 30 minutos.</p>
       <div class="input-group">
         <LockIcon class="input-icon" size="20" />
         <input type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="Código de 6 dígitos" v-model="twoFactorCode" required maxlength="6" />
@@ -56,6 +57,7 @@ const password = ref('')
 const showPassword = ref(false)
 const error = ref('')
 const loading = ref(false)
+const rememberMe = ref(false)
 const twoFactorPending = ref(false)
 const twoFactorEmail = ref('')
 const twoFactorCode = ref('')
@@ -83,7 +85,7 @@ const handleVerifyCode = async () => {
   loading.value = true
   error.value = ''
   try {
-    const user = await authApi('/auth/verify-login', { email: twoFactorEmail.value || username.value, code: twoFactorCode.value })
+    const user = await authApi('/auth/verify-login', { email: twoFactorEmail.value || username.value, code: twoFactorCode.value, rememberMe: rememberMe.value })
     emit('loginSuccess', user)
   } catch (e) {
     error.value = e.message
@@ -98,6 +100,8 @@ const resetTwoFactor = () => {
 </script>
 
 <style scoped>
+.remember-device { display:flex; align-items:center; gap:8px; color:#475569; font-size:14px; }
+.remember-device input { accent-color:#1c5bf0; width:18px; height:18px; }
 .login-container {
   background: white;
   border-radius: 32px 32px 0 0;
