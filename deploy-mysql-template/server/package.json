@@ -8,7 +8,8 @@
   },
   "dependencies": {
     "mysql2": "^3.15.3",
-    "ws": "^8.18.3"
+    "ws": "^8.18.3",
+    "nodemailer": "^7.0.10"
   },
   "engines": {
     "node": ">=18"
