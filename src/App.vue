@@ -169,7 +169,6 @@ const handleGoBack = () => {
 
   <div class="auth-layout" v-if="currentForm === 'login' || currentForm === 'register' || currentForm === 'forgot' || currentForm === 'reset-password' || currentForm === 'verifying-email'">
     <LanguageSelector />
-    <img class="auth-brand" src="/email-art/logo.png" alt="Change Skills Idiomas" />
     <HeroSection />
     
     <transition name="slide-fade" mode="out-in">
@@ -378,7 +377,6 @@ const handleGoBack = () => {
 </style>
 
 <style scoped>
-.auth-brand { width:170px; height:auto; margin:20px auto 8px; display:block; position:relative; z-index:2; }
 .verified-brand { position:absolute; top:32px; left:50%; transform:translateX(-50%); width:180px; height:auto; }
 .verified-success-screen { position:relative; min-height:100vh; width:100%; background:linear-gradient(160deg,#16a34a,#22c55e); display:grid; place-items:center; padding:24px; }
 .verified-success-card { width:min(420px,100%); padding:34px 26px; text-align:center; color:#fff; animation:success-pop .32s ease both; }

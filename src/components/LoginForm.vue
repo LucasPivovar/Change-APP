@@ -103,7 +103,7 @@ const resetTwoFactor = () => {
 
 <style scoped>
 .login-options { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-.remember-device { display:flex; align-items:center; gap:6px; color:var(--primary-blue); font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
+.remember-device { display:flex; align-items:center; gap:6px; color:var(--text-light); font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
 .remember-device input { accent-color:#1c5bf0; width:18px; height:18px; }
 .login-container {
   background: white;
