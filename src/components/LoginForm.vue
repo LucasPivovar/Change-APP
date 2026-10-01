@@ -1,6 +1,6 @@
 <template>
   <div class="login-container">
-    <form @submit.prevent="handleLogin" class="login-form">
+    <form v-if="!twoFactorPending" @submit.prevent="handleLogin" class="login-form">
       <div class="input-group">
         <UserIcon class="input-icon" size="20" />
         <input type="text" :placeholder="t('email_or_user')" v-model="username" required />
@@ -26,6 +26,20 @@
         {{ t('dont_have_account') }} <a href="#" @click.prevent="$emit('goToRegister')">{{ t('register_now') }}</a>
       </div>
     </form>
+
+    <form v-else @submit.prevent="handleVerifyCode" class="login-form">
+      <h3>Verifique seu e-mail</h3>
+      <p class="description">Enviamos um código para {{ twoFactorEmail }}. Digite o código para entrar.</p>
+      <div class="input-group">
+        <LockIcon class="input-icon" size="20" />
+        <input type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="Código de 6 dígitos" v-model="twoFactorCode" required maxlength="6" />
+      </div>
+      <button type="submit" class="btn-primary">Confirmar e entrar</button>
+      <p v-if="error" class="form-error" role="alert">{{ error }}</p>
+      <div class="register-link">
+        <a href="#" @click.prevent="resetTwoFactor">Voltar para o login</a>
+      </div>
+    </form>
   </div>
 </template>
 
@@ -41,15 +55,40 @@ const username = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const error = ref('')
+const twoFactorPending = ref(false)
+const twoFactorEmail = ref('')
+const twoFactorCode = ref('')
 
 const handleLogin = async () => {
   error.value = ''
   try {
-    const user = await authApi('/auth/login', { email: username.value, password: password.value })
+    const result = await authApi('/auth/login', { email: username.value, password: password.value })
+    if (result?.requiresTwoFactor) {
+      twoFactorPending.value = true
+      twoFactorEmail.value = result.email || username.value
+      twoFactorCode.value = ''
+      return
+    }
+    emit('loginSuccess', result)
+  } catch (e) {
+    error.value = e.message
+  }
+}
+
+const handleVerifyCode = async () => {
+  error.value = ''
+  try {
+    const user = await authApi('/auth/verify-login', { email: twoFactorEmail.value || username.value, code: twoFactorCode.value })
     emit('loginSuccess', user)
   } catch (e) {
     error.value = e.message
   }
+}
+
+const resetTwoFactor = () => {
+  twoFactorPending.value = false
+  twoFactorCode.value = ''
+  error.value = ''
 }
 </script>
 
@@ -69,6 +108,9 @@ const handleLogin = async () => {
   flex-direction: column;
   gap: 16px;
 }
+
+h3 { margin: 0; color: #1a235c; font-size: 22px; text-align: center; }
+.description { color: var(--text-light); font-size: 14px; margin: 0; line-height: 1.5; text-align: center; }
 
 .input-group {
   position: relative;

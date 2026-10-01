@@ -35,6 +35,7 @@ const verifyEmailToken = ref(urlParams.get('verify'))
 const resetPasswordToken = ref(urlParams.get('reset'))
 const selectedScenario = ref(null)
 const authMessage = ref('')
+const clearAuthUrl = () => { window.history.replaceState({}, '', window.location.pathname) }
 const openAiChat = (id) => {
   if (!id) {
     activeAiChatId.value = null
@@ -78,8 +79,8 @@ else if (verifyEmailToken.value) currentForm.value = 'verifying-email'
 else if (inviteGroupCode.value && currentUser()) currentForm.value = 'group-chat'
 if (verifyEmailToken.value) {
   authApi('/auth/verify-email', { token: verifyEmailToken.value })
-    .then(() => { window.history.replaceState({}, '', window.location.pathname); currentForm.value = 'home' })
-    .catch((e) => { authMessage.value = e.message; currentForm.value = 'login' })
+    .then(() => { clearAuthUrl(); currentForm.value = 'home' })
+    .catch((e) => { authMessage.value = e.message; clearAuthUrl(); currentForm.value = 'login' })
 }
 
 const handleLanguageSelect = (lang) => {
@@ -172,6 +173,15 @@ const handleGoBack = () => {
         v-else-if="currentForm === 'forgot'" 
         @goToLogin="currentForm = 'login'" 
       />
+      <ResetPasswordForm
+        v-else-if="currentForm === 'reset-password'"
+        :token="resetPasswordToken || ''"
+        @resetSuccess="clearAuthUrl(); currentForm = 'home'"
+      />
+      <div v-else-if="currentForm === 'verifying-email'" class="auth-status-card">
+        <h3>Confirmando seu e-mail...</h3>
+        <p>Estamos validando seu link e preparando sua entrada na Change Skills.</p>
+      </div>
     </transition>
   </div>
   
@@ -344,4 +354,10 @@ const handleGoBack = () => {
   transform: translateY(100%);
   opacity: 0;
 }
+</style>
+
+<style scoped>
+.auth-status-card { background:white; border-radius:32px 32px 0 0; padding:48px 24px 64px; width:100%; box-shadow:0 -4px 20px rgba(0,0,0,.05); text-align:center; color:#475569; }
+.auth-status-card h3 { margin:0 0 10px; color:#1a235c; font-size:22px; }
+.auth-status-card p { margin:0; line-height:1.5; }
 </style>
