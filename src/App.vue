@@ -35,6 +35,7 @@ const verifyEmailToken = ref(urlParams.get('verify'))
 const resetPasswordToken = ref(urlParams.get('reset'))
 const selectedScenario = ref(null)
 const authMessage = ref('')
+let verifiedTimer = null
 const clearAuthUrl = () => { window.history.replaceState({}, '', window.location.pathname) }
 const openAiChat = (id) => {
   if (!id) {
@@ -79,7 +80,12 @@ else if (verifyEmailToken.value) currentForm.value = 'verifying-email'
 else if (inviteGroupCode.value && currentUser()) currentForm.value = 'group-chat'
 if (verifyEmailToken.value) {
   authApi('/auth/verify-email', { token: verifyEmailToken.value })
-    .then(() => { clearAuthUrl(); currentForm.value = 'home' })
+    .then(() => {
+      clearAuthUrl()
+      currentForm.value = 'email-verified-success'
+      clearTimeout(verifiedTimer)
+      verifiedTimer = setTimeout(() => { currentForm.value = 'home' }, 3000)
+    })
     .catch((e) => { authMessage.value = e.message; clearAuthUrl(); currentForm.value = 'login' })
 }
 
@@ -147,6 +153,14 @@ const handleGoBack = () => {
 </script>
 
 <template>
+  <div v-if="currentForm === 'email-verified-success'" class="verified-success-screen">
+    <div class="verified-success-card">
+      <div class="verified-check">✓</div>
+      <h1>Sua conta foi verificada com sucesso</h1>
+      <p>Estamos abrindo sua sessão na Change Skills.</p>
+    </div>
+  </div>
+
   <SidebarMenu 
     :isOpen="isSidebarOpen" 
     @close="isSidebarOpen = false" 
@@ -360,4 +374,16 @@ const handleGoBack = () => {
 .auth-status-card { background:white; border-radius:32px 32px 0 0; padding:48px 24px 64px; width:100%; box-shadow:0 -4px 20px rgba(0,0,0,.05); text-align:center; color:#475569; }
 .auth-status-card h3 { margin:0 0 10px; color:#1a235c; font-size:22px; }
 .auth-status-card p { margin:0; line-height:1.5; }
+</style>
+
+<style scoped>
+.verified-success-screen { min-height:100vh; width:100%; background:linear-gradient(160deg,#16a34a,#22c55e); display:grid; place-items:center; padding:24px; }
+.verified-success-card { width:min(420px,100%); background:white; border-radius:32px; padding:34px 26px; text-align:center; color:#1a235c; box-shadow:0 24px 60px rgba(0,0,0,.18); animation:success-pop .32s ease both; }
+.verified-check { width:78px; height:78px; margin:0 auto 18px; border-radius:50%; display:grid; place-items:center; background:#dcfce7; color:#16a34a; font-size:44px; font-weight:900; }
+.verified-success-card h1 { margin:0 0 10px; font-size:25px; line-height:1.15; }
+.verified-success-card p { margin:0; color:#64748b; line-height:1.5; }
+.auth-status-card { background:white; border-radius:32px 32px 0 0; padding:42px 24px 58px; width:100%; box-shadow:0 -4px 20px rgba(0,0,0,.05); text-align:center; color:#475569; }
+.auth-status-card h3 { margin:0 0 10px; color:#1a235c; font-size:22px; }
+.auth-status-card p { margin:0; line-height:1.5; }
+@keyframes success-pop { from { opacity:0; transform:translateY(16px) scale(.96); } to { opacity:1; transform:none; } }
 </style>

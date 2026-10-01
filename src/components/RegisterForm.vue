@@ -1,13 +1,8 @@
 <template>
   <div class="login-container">
     <form v-if="!sent" @submit.prevent="handleNext" class="login-form">
-      <div class="step-indicator">
-        <span :class="['step-dot', { active: step === 1, done: step > 1 }]">1</span>
-        <span class="step-line"></span>
-        <span :class="['step-dot', { active: step === 2 }]">2</span>
-      </div>
-
-      <template v-if="step === 1">
+      <transition name="fields-slide" mode="out-in">
+      <div v-if="step === 1" key="account-start" class="fields-panel">
         <h3>Crie sua conta</h3>
         <p class="description">Primeiro, coloque seu nome completo e e-mail.</p>
         <div class="input-group">
@@ -18,9 +13,9 @@
           <MailIcon class="input-icon" size="20" />
           <input type="email" placeholder="Email" v-model="email" required />
         </div>
-      </template>
+      </div>
 
-      <template v-else>
+      <div v-else key="account-finish" class="fields-panel">
         <h3>Escolha seu usuário</h3>
         <p class="description">Use apenas letras e números. O nome fica em maiúsculo automaticamente.</p>
         <div class="input-group">
@@ -41,7 +36,8 @@
           <li :class="{ ok: password.length >= 8 }">Pelo menos 8 caracteres</li>
           <li :class="{ ok: /[A-Z]/.test(password) }">Pelo menos uma letra maiúscula</li>
         </ul>
-      </template>
+      </div>
+      </transition>
 
       <button type="submit" class="btn-primary" :disabled="loading || (step === 2 && (!canSubmitStep2 || usernameAvailable === false))">
         {{ step === 1 ? 'Continuar' : (loading ? 'Criando...' : t('create_account')) }}
@@ -152,14 +148,14 @@ const handleNext = async () => {
 </script>
 
 <style scoped>
-.login-container { background:white; border-radius:32px 32px 0 0; padding:42px 24px 64px; width:100%; box-shadow:0 -4px 20px rgba(0,0,0,.05); position:relative; z-index:3; }
-.login-form { display:flex; flex-direction:column; gap:16px; }
+.login-container { background:white; border-radius:32px 32px 0 0; padding:30px 24px 50px; width:100%; box-shadow:0 -4px 20px rgba(0,0,0,.05); position:relative; z-index:3; }
+.login-form { display:flex; flex-direction:column; gap:14px; }
+.fields-panel { display:flex; flex-direction:column; gap:14px; }
+.fields-slide-enter-active, .fields-slide-leave-active { transition:opacity .22s ease, transform .22s ease; }
+.fields-slide-enter-from { opacity:0; transform:translateX(18px); }
+.fields-slide-leave-to { opacity:0; transform:translateX(-18px); }
 h3 { margin:0; color:#1a235c; font-size:22px; text-align:center; }
 .description { margin:0; color:var(--text-light); font-size:14px; text-align:center; line-height:1.5; }
-.step-indicator { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:4px; }
-.step-dot { width:30px; height:30px; border-radius:50%; display:grid; place-items:center; background:#e8eefc; color:#1a235c; font-weight:800; font-size:13px; }
-.step-dot.active, .step-dot.done { background:var(--primary-blue); color:white; }
-.step-line { width:56px; height:3px; border-radius:999px; background:#dbeafe; }
 .input-group { position:relative; display:flex; align-items:center; }
 .input-icon { position:absolute; left:16px; color:#999; }
 .input-group input { width:100%; padding:16px 16px 16px 48px; border:1px solid var(--border-color); border-radius:16px; font-size:16px; outline:none; transition:border-color .2s; background:#fdfdfd; text-transform:none; }
