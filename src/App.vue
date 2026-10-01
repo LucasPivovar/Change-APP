@@ -156,8 +156,7 @@ const handleGoBack = () => {
   <div v-if="currentForm === 'email-verified-success'" class="verified-success-screen">
     <div class="verified-success-card">
       <div class="verified-check">✓</div>
-      <h1>Sua conta foi verificada com sucesso</h1>
-      <p>Estamos abrindo sua sessão na Change Skills.</p>
+      <h1>Sua conta foi confirmada com sucesso</h1>
     </div>
   </div>
 
@@ -378,8 +377,8 @@ const handleGoBack = () => {
 
 <style scoped>
 .verified-success-screen { min-height:100vh; width:100%; background:linear-gradient(160deg,#16a34a,#22c55e); display:grid; place-items:center; padding:24px; }
-.verified-success-card { width:min(420px,100%); background:white; border-radius:32px; padding:34px 26px; text-align:center; color:#1a235c; box-shadow:0 24px 60px rgba(0,0,0,.18); animation:success-pop .32s ease both; }
-.verified-check { width:78px; height:78px; margin:0 auto 18px; border-radius:50%; display:grid; place-items:center; background:#dcfce7; color:#16a34a; font-size:44px; font-weight:900; }
+.verified-success-card { width:min(420px,100%); padding:34px 26px; text-align:center; color:#fff; animation:success-pop .32s ease both; }
+.verified-check { width:78px; height:78px; margin:0 auto 18px; border-radius:50%; display:grid; place-items:center; border:3px solid #fff; color:#fff; font-size:44px; font-weight:900; }
 .verified-success-card h1 { margin:0 0 10px; font-size:25px; line-height:1.15; }
 .verified-success-card p { margin:0; color:#64748b; line-height:1.5; }
 .auth-status-card { background:white; border-radius:32px 32px 0 0; padding:42px 24px 58px; width:100%; box-shadow:0 -4px 20px rgba(0,0,0,.05); text-align:center; color:#475569; }

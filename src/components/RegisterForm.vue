@@ -17,10 +17,10 @@
 
       <div v-else key="account-finish" class="fields-panel">
         <h3>Escolha seu usuário</h3>
-        <p class="description">Use apenas letras e números. O nome fica em maiúsculo automaticamente.</p>
+        <p class="description">Use apenas letras e números. O nome fica em minúsculo automaticamente.</p>
         <div class="input-group">
           <AtSignIcon class="input-icon" size="20" />
-          <input type="text" placeholder="NOMEUSUARIO" :value="username" @input="onUsernameInput" required minlength="3" maxlength="24" />
+          <input type="text" placeholder="nomeusuario" :value="username" @input="onUsernameInput" required minlength="3" maxlength="24" />
         </div>
         <p v-if="usernameMessage" :class="['field-hint', usernameAvailable ? 'ok' : 'bad']">{{ usernameMessage }}</p>
 
@@ -80,7 +80,7 @@ const usernameMessage = ref('')
 const usernameAvailable = ref(null)
 let usernameTimer
 
-const cleanUsername = (value) => String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 24)
+const cleanUsername = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 24)
 const canSubmitStep2 = computed(() => username.value.length >= 3 && password.value.length >= 8 && /[A-Z]/.test(password.value))
 
 function onUsernameInput(event) {
@@ -113,7 +113,7 @@ const validateStep1 = () => {
 }
 
 const validateStep2 = () => {
-  if (!/^[A-Z0-9]{3,24}$/.test(username.value)) return 'O usuário deve ter 3 a 24 caracteres, sem espaços e sem caracteres especiais.'
+  if (!/^[a-z0-9]{3,24}$/.test(username.value)) return 'O usuário deve ter 3 a 24 caracteres, sem espaços e sem caracteres especiais.'
   if (usernameAvailable.value === false) return usernameMessage.value || 'Esse nome de usuário já existe.'
   if (password.value.length < 8) return 'A senha precisa ter pelo menos 8 caracteres.'
   if (!/[A-Z]/.test(password.value)) return 'A senha precisa ter pelo menos uma letra maiúscula.'
