@@ -21,7 +21,7 @@
     <div v-else class="success-card">
       <h3>Senha atualizada</h3>
       <p>Você já está conectado na sua conta.</p>
-      <button class="btn-primary" @click="$emit('resetSuccess')">Continuar</button>
+      <button class="btn-primary" @click="$emit('resetSuccess')">Voltar ao início</button>
     </div>
   </div>
 </template>
@@ -39,6 +39,7 @@ const done = ref(false)
 const error = ref('')
 const validPassword = computed(() => password.value.length >= 8 && /[A-Z]/.test(password.value))
 async function handleReset() {
+  if (loading.value || done.value) return
   error.value = ''
   if (!validPassword.value) { error.value = 'A senha precisa ter 8 caracteres e uma letra maiúscula.'; return }
   loading.value = true

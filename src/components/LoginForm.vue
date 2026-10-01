@@ -19,7 +19,7 @@
         <a href="#" @click.prevent="$emit('goToForgot')">{{ t('forgot_password') }}</a>
       </div>
 
-      <button type="submit" class="btn-primary">{{ t('login_btn') }}</button>
+      <button type="submit" :disabled="loading" class="btn-primary">{{ t('login_btn') }}</button>
       <p v-if="error" class="form-error" role="alert">{{ error }}</p>
 
       <div class="register-link">
@@ -34,7 +34,7 @@
         <LockIcon class="input-icon" size="20" />
         <input type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="Código de 6 dígitos" v-model="twoFactorCode" required maxlength="6" />
       </div>
-      <button type="submit" class="btn-primary">Confirmar e entrar</button>
+      <button type="submit" :disabled="loading" class="btn-primary">Confirmar e entrar</button>
       <p v-if="error" class="form-error" role="alert">{{ error }}</p>
       <div class="register-link">
         <a href="#" @click.prevent="resetTwoFactor">Voltar para o login</a>
@@ -55,11 +55,14 @@ const username = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const error = ref('')
+const loading = ref(false)
 const twoFactorPending = ref(false)
 const twoFactorEmail = ref('')
 const twoFactorCode = ref('')
 
 const handleLogin = async () => {
+  if (loading.value) return
+  loading.value = true
   error.value = ''
   try {
     const result = await authApi('/auth/login', { email: username.value, password: password.value })
@@ -72,17 +75,19 @@ const handleLogin = async () => {
     emit('loginSuccess', result)
   } catch (e) {
     error.value = e.message
-  }
+  } finally { loading.value = false }
 }
 
 const handleVerifyCode = async () => {
+  if (loading.value) return
+  loading.value = true
   error.value = ''
   try {
     const user = await authApi('/auth/verify-login', { email: twoFactorEmail.value || username.value, code: twoFactorCode.value })
     emit('loginSuccess', user)
   } catch (e) {
     error.value = e.message
-  }
+  } finally { loading.value = false }
 }
 
 const resetTwoFactor = () => {
