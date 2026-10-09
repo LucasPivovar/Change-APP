@@ -1,7 +1,7 @@
 # Auditoria do whitelabel — 09/10/2026
 
 ## Resultado
-11 testes automatizados passaram. Banco temporário isolado; nenhum cadastro real foi alterado. As verificações de interface executam os templates, não substituem inspeção visual completa em todos os dispositivos.
+13 testes automatizados passaram. Banco temporário isolado; nenhum cadastro real foi alterado. As verificações de interface executam os templates, não substituem inspeção visual completa em todos os dispositivos.
 
 ## API e fluxos verificados
 | Área / rotas | Evidência | Resultado |
@@ -22,7 +22,7 @@
 | Persistência | Reinicialização preserva usuários, cursos, notas e entregas | Passou |
 
 ## Correções desta revisão
-- Links auxiliares organizados em cadastro, seletor de perfil e acesso administrativo, com estilos próprios; recuperação duplicada removida.
+- Login mantém somente o formulário, conforme solicitado; acesso administrativo e seletor de perfis removidos.
 - Mensagens de envio reconhecem SMTP além do Resend.
 
 ## O que falta
@@ -40,3 +40,13 @@
 | Qualidade visual | Revisar telas de todos os perfis em mobile/desktop; testes de renderização não medem alinhamento, acessibilidade ou contraste. |
 
 Não há garantia de ausência de bugs: resultados descrevem os cenários executados e as limitações conhecidas.
+
+## Revisão de rotas, botões e modais
+- Templates de 35 telas principais dos quatro perfis renderizados sem exceções.
+- Abertura dos 41 métodos de modal encontrados no legado, usando as extensões publicadas e registros existentes, testada em DOM simulado. Isso verifica execução, não posição visual nem cada clique real.
+- Referências de handlers conferidas e regressão adicionada para variáveis fora do escopo de onclick.
+- Corrigidos os atalhos Alocar aluno, Declaração de matrícula e Transferir aluno: agora fecham o modal pela API app.closeModal().
+- Corrigida abertura de configuração de pagamento quando setupFee está ausente.
+- No navegador de produção: Esqueci a senha, atualização da página de recuperação e Voltar ao login funcionaram; nenhum erro de console nesses passos.
+- A suíte de API utiliza banco temporário; não altera usuários reais. Não foi realizado percurso visual autenticado de todos os controles com contas reais.
+- Portanto, ainda não é correto declarar que todos os botões e integrações estão funcionando. As pendências da tabela acima continuam abertas.

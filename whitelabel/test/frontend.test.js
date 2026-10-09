@@ -9,7 +9,7 @@ const source = name => fs.readFileSync(path.join(root, name), 'utf8');
 function fixture() {
   const nodes = new Map();
   const node = () => ({ innerHTML: '', value: '', style: {}, dataset: {}, children: [], classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } }, addEventListener() {}, setAttribute() {}, appendChild() {}, prepend() {}, remove() {}, querySelectorAll() { return []; }, querySelector() { return null; } });
-  const document = { getElementById(id) { if (!nodes.has(id)) nodes.set(id, node()); return nodes.get(id); }, querySelectorAll() { return []; }, querySelector() { return null; }, addEventListener() {}, createElement: node, head: node() };
+  const document = { getElementById(id) { if (!nodes.has(id)) nodes.set(id, node()); return nodes.get(id); }, querySelectorAll() { return []; }, querySelector() { return null; }, addEventListener() {}, createElement: node, head: node(), body: node() };
   let data;
   const context = vm.createContext({ document, window: { addEventListener() {}, location: { hash: '#/auth/escola' } }, localStorage: { getItem() { return data || null; }, setItem(key, value) { data = value; } }, console, crypto, structuredClone, setInterval() {}, setTimeout() {}, location: { hash: '#/auth/escola', origin: 'http://localhost:3000' }, URL, AbortSignal });
   vm.runInContext(source('database.js') + '\nthis.DB=PratikaDB;', context);
@@ -27,6 +27,42 @@ test('todos os handlers de botões referenciam métodos existentes', () => {
   const refs = new Set([...all.matchAll(/\bapp\.([A-Za-z_$][\w$]*)\s*\(/g)].map(m => m[1]));
   for (const name of refs) assert.ok(typeof context.App.prototype[name] === 'function' || extensions.has(name), `Handler ausente: ${name}`);
   assert.ok(refs.size > 70, 'Inventário deve cobrir os controles dos portais');
+});
+
+test('atalhos dos modais não dependem de variáveis locais inacessíveis ao clique', () => {
+  const all = source('app.js') + source('backend-client.js') + source('academic-client.js');
+  for (const match of all.matchAll(/onclick="([^"]*)"/g)) {
+    assert.ok(!/\bmodalRoot\b/.test(match[1]), `Referência fora do escopo: ${match[1]}`);
+  }
+});
+
+test('modais publicados abrem com registros existentes sem exceções', () => {
+  const { context, nodes } = fixture();
+  const child = () => ({ value: 'escola-1', checked: true, focus() {}, style: {}, querySelector: child, querySelectorAll: () => [], elements: new Proxy({}, { get: child }), addEventListener() {} });
+  for (const id of ['action-modal-root', 'academic-modal-root']) context.document.getElementById(id).querySelector = child;
+  vm.runInContext(source('backend-client.js').replace('  boot();', '  cache = structuredClone(data);'), context);
+  context.Backend = context.window.Backend;
+  vm.runInContext(source('academic-client.js'), context);
+  const app = new context.App();
+  app.session = { role: 'escola', schoolId: 'escola-1', userId: 'aluno-1' };
+  const data = context.data;
+  const course = data.courses[0], mod = course.modules[0];
+  const ids = { schoolId: data.schools[0].id, studentId: data.students[0].id,
+    teacherId: data.teachers[0].id, classId: data.classes[0].id,
+    financialId: data.financial[0].id, eventId: data.events[0]?.id,
+    taskId: data.tasks[0]?.id, lessonId: data.lessons[0]?.id,
+    materialId: data.materials[0]?.id, courseId: course.id, moduleId: mod.id,
+    itemId: mod.items[0].id, prefillDate: '2026-10-09' };
+  const failures = [];
+  const methods = [...source('app.js').matchAll(/^  (show\w+Modal)\(([^)]*)\)/gm)];
+  for (const [, name, signature] of methods) {
+    const args = signature ? signature.split(',').map(p => ids[p.trim().split(/\s*=/)[0]]) : [];
+    try { app[name](...args); }
+    catch (error) { failures.push(`${name}: ${error.message}`); }
+    for (const n of nodes.values()) n.innerHTML = '';
+  }
+  assert.deepEqual(failures, []);
+  assert.ok(methods.length >= 35);
 });
 test('telas principais dos quatro perfis renderizam sem exceções', () => {
   const { context, node } = fixture();

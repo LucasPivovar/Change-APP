@@ -4951,7 +4951,7 @@ else if (view === "aluno") {
           <div style="border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden; margin-bottom: 1.25rem;">
             <div style="background: #F1F5F9; padding: 0.6rem 1rem; font-size: 0.75rem; font-weight: 800; color: #475569; text-transform: uppercase; display: flex; justify-content: space-between; align-items: center;">
               <span>Alunos Alocados nesta Turma</span>
-              <span style="font-size: 0.7rem; color: #4F46E5; cursor: pointer;" onclick="modalRoot.innerHTML=''; app.showAddStudentModal()">+ Alocar Aluno</span>
+              <span style="font-size: 0.7rem; color: #4F46E5; cursor: pointer;" onclick="app.closeModal(); app.showAddStudentModal()">+ Alocar Aluno</span>
             </div>
             <div style="max-height: 180px; overflow-y: auto; padding: 0.5rem;">
               ${students.slice(0, 4).map(s => `
@@ -5268,7 +5268,7 @@ else if (view === "aluno") {
             <div>
               <div style="font-size: 0.85rem; font-weight: 700; color: #1E1B4B; margin-bottom: 0.15rem;">E-mail de Boas-Vindas e Cobrança Enviados</div>
               <div style="font-size: 0.8rem; color: #374151; line-height: 1.4;">
-                Enviamos as orientações de boas-vindas e a cobrança da taxa de setup de <strong>R$ ${school.setupFee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> para o e-mail: <strong style="color: #4F46E5;">${school.leadEmail}</strong>.
+                Enviamos as orientações de boas-vindas e a cobrança da taxa de setup de <strong>R$ ${Number(school.setupFee || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> para o e-mail: <strong style="color: #4F46E5;">${school.leadEmail}</strong>.
               </div>
               <div style="margin-top: 0.4rem;">
                 <span class="badge pending" style="font-size: 0.72rem; font-weight: 700;">Status: Pagamento do Setup Pendente</span>
@@ -5322,7 +5322,7 @@ else if (view === "aluno") {
               </tr>
               <tr>
                 <td style="color: #64748B;">Taxa de Setup:</td>
-                <td style="font-weight: 800; color: #D97706;">R$ ${school.setupFee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (Pendente)</td>
+                <td style="font-weight: 800; color: #D97706;">R$ ${Number(school.setupFee || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (Pendente)</td>
               </tr>
               <tr>
                 <td style="color: #64748B;">Faturamento Mensal:</td>
@@ -5389,7 +5389,7 @@ else if (view === "aluno") {
           <div style="background: #F8FAFC; border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem; border: 1px solid #E2E8F0; text-align: center;">
             <span style="font-size: 0.8rem; color: #64748B;">Valor Total do Setup de Implantação:</span>
             <div style="font-size: 1.8rem; font-weight: 800; color: #0F172A; font-family: var(--font-title); margin-top: 0.2rem;">
-              R$ ${school.setupFee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              R$ ${Number(school.setupFee || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
             <div style="font-size: 0.8rem; color: #475569; margin-top: 0.25rem;">
               Escola: <strong>${school.name}</strong> (${school.domain})
@@ -5950,11 +5950,11 @@ else if (view === "aluno") {
 
           <!-- Botões Executivos da Escola -->
           <div style="display: flex; gap: 0.75rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
-            <button class="btn btn-primary btn-full" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; height: 44px; font-weight: 700;" onclick="modalRoot.innerHTML=''; app.showEnrollmentDeclarationModal('${s.id}')">
+            <button class="btn btn-primary btn-full" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; height: 44px; font-weight: 700;" onclick="app.closeModal(); app.showEnrollmentDeclarationModal('${s.id}')">
               <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
               Declaração de Matrícula
             </button>
-            <button class="btn btn-outline btn-full" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; height: 44px; font-weight: 700;" onclick="modalRoot.innerHTML=''; app.showTransferStudentModal('${s.id}')">
+            <button class="btn btn-outline btn-full" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; height: 44px; font-weight: 700;" onclick="app.closeModal(); app.showTransferStudentModal('${s.id}')">
               <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 1l4 4-4 4"></path><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><path d="M7 23l-4-4 4-4"></path><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
               Transferir Turma
             </button>
