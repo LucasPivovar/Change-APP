@@ -45,8 +45,8 @@
       document.querySelectorAll('input[type="password"], input[type="email"]').forEach(input => { input.value = ''; });
       const form = document.querySelector('#app-root form');
       if (form) {
-        const links = document.createElement('div'); links.style.cssText = 'margin-top:18px;display:flex;gap:12px;flex-wrap:wrap';
-        links.innerHTML = '<a href="#/auth/register">Cadastrar minha escola</a><a href="#/auth/recover">Esqueci a senha</a><a href="#/auth/admin">Administrador</a><a href="#/auth/escola">Escola</a><a href="#/auth/professor">Professor</a><a href="#/auth/aluno">Aluno</a>';
+        const links = document.createElement('div'); links.className = 'auth-access-links';
+        links.innerHTML = `<a class="auth-register-link" href="#/auth/register">Cadastrar minha escola</a><nav class="auth-access-tabs" aria-label="Tipo de acesso">${[['escola','Escola'],['professor','Professor'],['aluno','Aluno']].map(([role,label]) => `<a href="#/auth/${role}" ${view === role ? 'aria-current="page"' : ''}>${label}</a>`).join('')}</nav><a class="auth-admin-link" href="#/auth/admin">Acesso administrativo</a>`;
         form.appendChild(links);
       } return;
     }

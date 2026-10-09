@@ -341,14 +341,14 @@ async function api(req, res, pathname) {
   }
   if (pathname === '/api/email/test' && req.method === 'POST') {
     if (!['admin', 'escola'].includes(user.role)) fail(403, 'Sem permissão.'); limit(req, 'email', 5);
-    await mail(user.email, 'Teste de e-mail — Change Skills', 'O envio de e-mail da plataforma está funcionando.'); return { message: process.env.RESEND_API_KEY ? 'E-mail enviado para sua conta.' : 'Mensagem salva na caixa de desenvolvimento: data/mail.' };
+    await mail(user.email, 'Teste de e-mail — Change Skills', 'O envio de e-mail da plataforma está funcionando.'); return { message: (process.env.RESEND_API_KEY || process.env.SMTP_USER) ? 'E-mail enviado para sua conta.' : 'Mensagem salva na caixa de desenvolvimento: data/mail.' };
   }
   if (pathname === '/api/email/receipt' && req.method === 'POST') {
     limit(req, 'email', 5); const record = scope(store.db, user).financial.find(f => f.id === input.financialId); if (!record) fail(404, 'Cobrança não encontrada.');
     const student = store.db.students.find(s => s.schoolId === record.schoolId && ownsFinancial(store.db, record, s));
     if (!student?.email) fail(400, 'Aluno sem e-mail cadastrado.');
     await mail(student.email, 'Comprovante financeiro — Change Skills', `Aluno: ${record.studentName || student.name}\nDescrição: ${record.description || record.desc || 'Mensalidade'}\nValor: R$ ${Number(record.value || record.amount || 0).toFixed(2)}\nStatus: ${record.status}\nReferência: ${record.id}`);
-    return { message: process.env.RESEND_API_KEY ? 'Comprovante enviado.' : 'Comprovante salvo em data/mail.' };
+    return { message: (process.env.RESEND_API_KEY || process.env.SMTP_USER) ? 'Comprovante enviado.' : 'Comprovante salvo em data/mail.' };
   }
   if (pathname === '/api/export' && req.method === 'GET') {
     if (!['admin', 'escola'].includes(user.role)) fail(403, 'Sem permissão.');

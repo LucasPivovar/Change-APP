@@ -4348,3 +4348,5 @@ input:checked + .slider:before {
   border-color: var(--primary-color);
   background: #EFF6FF;
 }
+
+.auth-access-links{display:flex;flex-direction:column;align-items:center;gap:16px;margin-top:22px;padding-top:20px;border-top:1px solid #e2e8f0}.auth-access-links a{font-family:inherit;text-decoration:none;transition:background .15s,color .15s}.auth-register-link{color:#246bfd;font-size:14px;font-weight:600}.auth-access-tabs{display:flex;width:100%;gap:4px;padding:4px;border-radius:12px;background:#f1f5f9}.auth-access-tabs a{flex:1;text-align:center;color:#64748b;padding:10px 4px;border-radius:9px;font-size:13px;font-weight:600}.auth-access-tabs a[aria-current="page"]{background:#fff;color:#246bfd;box-shadow:0 1px 4px #0000000d}.auth-access-tabs a:hover{background:#fff;color:#246bfd}.auth-admin-link{color:#64748b;font-size:12px}.auth-access-links a:focus-visible{outline:2px solid #246bfd;outline-offset:3px}

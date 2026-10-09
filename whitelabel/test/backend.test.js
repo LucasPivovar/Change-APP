@@ -279,3 +279,28 @@ test('curso completo: matrícula, rascunhos, aulas, materiais, entrega, correç�
   assert.equal((await action('delete-course', { courseId })).status, 200);
   assert.ok(!(await call('/api/bootstrap', null, student.cookie)).json.courses.some(c => c.id === courseId));
 });
+test('auditoria: prefixo publicado, configurações, exportação, e-mails e proteção das rotas', async () => {
+  const admin = fixtures.admin.cookie, school = fixtures.school.cookie;
+  const routes = ['/auth/me','/bootstrap','/admin/settings','/accounts','/messages','/export'];
+  for (const route of routes) assert.equal((await fetch(base + '/whitelabel/api' + route)).status, 401, route);
+  assert.equal((await call('/whitelabel/api/auth/me', null, admin)).status, 200);
+  assert.equal((await fetch(base + '/whitelabel/backend-client.js')).status, 200);
+  assert.equal((await fetch(base + '/whitelabel/style.css')).status, 200);
+  assert.equal((await fetch(base + '/whitelabel/server.js')).status, 404);
+  assert.equal((await call('/api/admin/settings', { tab:'general',values:[{value:'Teste auditoria',checked:true}] }, admin)).status, 200);
+  assert.equal((await call('/api/admin/settings', null, admin)).json.general[0].value,'Teste auditoria');
+  assert.equal((await call('/api/admin/settings', null, school)).status,403);
+  assert.equal((await call('/api/admin/settings', {tab:'invalido',values:[]},admin)).status,400);
+  for(const collection of ['schools','students','teachers','financial']) {
+    const r=await fetch(base+'/whitelabel/api/export?collection='+collection,{headers:{Cookie:school}});
+    assert.equal(r.status,200);assert.match(r.headers.get('content-type'),/text\/csv/);assert.match(r.headers.get('content-disposition'),/attachment/);await r.text();
+  }
+  assert.equal((await call('/api/export?collection=users',null,admin)).status,400);
+  assert.equal((await call('/api/email/test',{},school)).status,200);
+  const charge=(await call('/api/bootstrap',null,school)).json.financial[0];
+  assert.ok(charge);assert.equal((await call('/api/email/receipt',{financialId:charge.id},school)).status,200);
+  assert.equal((await call('/api/email/receipt',{financialId:'missing'},school)).status,404);
+  const mailFiles=fs.readdirSync(path.join(directory,'mail')).map(f=>JSON.parse(fs.readFileSync(path.join(directory,'mail',f))));
+  assert.ok(mailFiles.some(m=>m.subject.includes('Teste de e-mail')));assert.ok(mailFiles.some(m=>m.subject.includes('Comprovante financeiro')));
+  assert.equal((await call('/api/missing',null,admin)).status,404);
+});
