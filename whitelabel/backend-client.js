@@ -43,12 +43,7 @@
     if (!['register', 'recover', 'reset'].includes(view)) {
       originalAuth.call(this, view);
       document.querySelectorAll('input[type="password"], input[type="email"]').forEach(input => { input.value = ''; });
-      const form = document.querySelector('#app-root form');
-      if (form) {
-        const links = document.createElement('div'); links.className = 'auth-access-links';
-        links.innerHTML = `<a class="auth-register-link" href="#/auth/register">Cadastrar minha escola</a><nav class="auth-access-tabs" aria-label="Tipo de acesso">${[['escola','Escola'],['professor','Professor'],['aluno','Aluno']].map(([role,label]) => `<a href="#/auth/${role}" ${view === role ? 'aria-current="page"' : ''}>${label}</a>`).join('')}</nav><a class="auth-admin-link" href="#/auth/admin">Acesso administrativo</a>`;
-        form.appendChild(links);
-      } return;
+      return;
     }
     const title = { register: 'Cadastre sua escola', recover: 'Recuperar senha', reset: 'Criar nova senha' }[view];
     document.getElementById('app-root').innerHTML = `<div style="min-height:100vh;display:grid;place-items:center;padding:24px;background:#031735"><div class="auth-card" style="width:100%;max-width:460px;background:white;padding:32px;border-radius:16px;color:#031735"><h2>${title}</h2><form id="backend-auth-form">${view === 'register' ? '<div class="form-group"><label>Seu nome</label><input name="name" class="form-control" maxlength="120" required></div><div class="form-group"><label>Nome da escola</label><input name="schoolName" class="form-control" maxlength="160" required></div>' : ''}${view !== 'reset' ? '<div class="form-group"><label>E-mail</label><input name="email" class="form-control" type="email" autocomplete="email" required></div>' : ''}${view !== 'recover' ? '<div class="form-group"><label>Senha (mínimo 10 caracteres)</label><input name="password" class="form-control" type="password" minlength="10" maxlength="128" autocomplete="new-password" required></div><div class="form-group"><label>Confirme a senha</label><input name="confirm" class="form-control" type="password" minlength="10" autocomplete="new-password" required></div>' : ''}<p id="auth-result" role="status"></p><button class="btn btn-primary btn-full" type="submit">${view === 'recover' ? 'Enviar recuperação' : 'Salvar'}</button></form><p style="margin-top:18px"><a href="#/auth/escola">Voltar ao login</a></p></div></div>`;
