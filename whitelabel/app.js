@@ -276,11 +276,11 @@ class PratikaApp {
                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                 Console Corporativo da Diretoria
               </div>
-              <h1 style="font-size: 2rem; line-height: 1.25; margin-bottom: 0.75rem;">Gestao executiva e controle da sua escola de idiomas.</h1>
-              <p style="color: #94A3B8; font-size: 0.9rem; margin-bottom: 1.5rem;">Aprenda idiomas. Transforme o mundo. Gestao completa de faturamento, turmas, professores e expansao White Label.</p>
+              <h1 style="font-size: 2rem; line-height: 1.25; margin-bottom: 0.75rem;">Cursos e alunos da sua escola parceira.</h1>
+              <p style="color: #94A3B8; font-size: 0.9rem; margin-bottom: 1.5rem;">Aprenda idiomas. Transforme o mundo. Cadastre seus alunos e acompanhe os cursos disponibilizados pela Change Skills.</p>
               <div class="auth-features-list" style="text-align: left;">
                 <div class="auth-feature-item" style="color: #E2E8F0;">${Icons.check} Painel de MRR, repasses e fluxo de caixa</div>
-                <div class="auth-feature-item" style="color: #E2E8F0;">${Icons.check} Salas de aula integradas e docentes</div>
+                <div class="auth-feature-item" style="color: #E2E8F0;">${Icons.check} Catálogo de cursos disponibilizado pelo administrador</div>
                 <div class="auth-feature-item" style="color: #E2E8F0;">${Icons.check} Personalizacao White Label da sua marca</div>
               </div>
             </div>
@@ -431,7 +431,7 @@ else if (view === "aluno") {
               <p style="color: rgba(255,255,255,0.85); font-size: 0.9rem; margin-bottom: 1.5rem;">Salas ao vivo interativas, livros digitais, exercícios dinâmicos e acompanhamento com o Camaleão.</p>
               
               <div class="auth-features-list" style="text-align: left;">
-                <div class="auth-feature-item" style="color: #E2E8F0;">${Icons.check} Aulas ao vivo com professores dedicados</div>
+                <div class="auth-feature-item" style="color: #E2E8F0;">${Icons.check} Cursos e conteúdos para estudar no seu ritmo</div>
                 <div class="auth-feature-item" style="color: #E2E8F0;">${Icons.check} Exercícios práticos e feedbacks</div>
                 <div class="auth-feature-item" style="color: #E2E8F0;">${Icons.check} Certificados oficiais reconhecidos</div>
               </div>
@@ -661,12 +661,8 @@ else if (view === "aluno") {
     if (this.session.role === "escola") {
       const items = [
         { route: "dashboard", label: "Dashboard", icon: Icons.dashboard },
-        { route: "cursos", label: "Cursos & Módulos", icon: Icons.materiais },
+        { route: "cursos", label: "Cursos disponíveis", icon: Icons.materiais },
         { route: "alunos", label: "Alunos", icon: Icons.alunos },
-        { route: "professores", label: "Professores", icon: Icons.professores },
-        { route: "turmas", label: "Turmas", icon: Icons.turmas },
-        { route: "calendario", label: "Calendário", icon: Icons.calendario },
-        { route: "aulas", label: "Aulas", icon: Icons.aulas },
         { route: "atividades", label: "Atividades", icon: Icons.tarefas },
         { route: "materiais", label: "Materiais", icon: Icons.materiais },
         { route: "financeiro", label: "Financeiro", icon: Icons.financeiro },
@@ -685,10 +681,7 @@ else if (view === "aluno") {
     } else if (this.session.role === "aluno") {
       const items = [
         { route: "home", label: "Início", icon: Icons.home },
-        { route: "cursos", label: "Cursos & Aulas", icon: Icons.materiais },
-        { route: "turmas", label: "Minhas Turmas", icon: Icons.turmas },
-        { route: "aulas", label: "Minhas Aulas", icon: Icons.aulas },
-        { route: "calendario", label: "Calendário", icon: Icons.calendario },
+        { route: "cursos", label: "Meus cursos", icon: Icons.materiais },
         { route: "tarefas", label: "Tarefas", icon: Icons.tarefas },
         { route: "materiais", label: "Materiais", icon: Icons.materiais },
         { route: "mensagens", label: "Mensagens", icon: Icons.comunicacao },

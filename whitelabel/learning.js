@@ -7,8 +7,9 @@ const published = item => item.published !== false && item.status !== 'draft';
 function canSeeCourse(course, user) {
   if (!course) return false;
   if (user.role === 'admin') return true;
-  if (course.schoolId !== user.schoolId) return false;
-  if (user.role === 'escola') return true;
+  const schools = Array.isArray(course.schoolIds) ? course.schoolIds : [course.schoolId];
+  if (!schools.includes(user.schoolId)) return false;
+  if (user.role === 'escola') return published(course);
   if (user.role === 'professor') return course.teacherId === user.profileId;
   return user.role === 'aluno' && published(course) && (!Array.isArray(course.studentIds) || course.studentIds.includes(user.profileId));
 }
@@ -38,22 +39,29 @@ function fileReferences(course, fileId) {
 }
 function canDownload(data, file, user) {
   if (user.role === 'admin' || file.ownerId === user.id) return true;
-  if (file.schoolId !== user.schoolId) return false;
-  if (user.role === 'escola') return true;
-  return data.db.courses.some(c => canSeeCourse(c, user) && fileReferences(c, file.id).some(ref => user.role !== 'aluno' || (!ref.item || published(ref.item)) && (!ref.studentId || ref.studentId === user.profileId)));
+  if (file.schoolId === user.schoolId && user.role === 'escola') return true;
+  return data.db.courses.some(c => canSeeCourse(c, user) && fileReferences(c, file.id).some(ref =>
+    (!ref.item || published(ref.item)) && (!ref.studentId || (user.role === 'aluno' ? ref.studentId === user.profileId : data.db.students.some(s => s.id === ref.studentId && s.schoolId === user.schoolId)))));
 }
 function mutate(data, user, action, input, validateLegacy) {
-  const db = data.db; const editing = ['admin', 'escola', 'professor'].includes(user.role);
+  const db = data.db; const editing = user.role === 'admin';
   const learnerAction = ['submit', 'completion'].includes(action);
   if (learnerAction ? user.role !== 'aluno' : !editing) fail(403, 'Sem permissão para esta operação.');
   let course = db.courses.find(c => c.id === input.courseId);
   if (action === 'course' && !input.courseId) {
-    const schoolId = user.role === 'admin' ? input.schoolId : user.schoolId;
-    if (!db.schools.some(s => s.id === schoolId)) fail(400, 'Selecione uma escola válida.');
-    course = { id: 'curso-' + randomUUID(), schoolId, teacherId: null, modules: [] }; db.courses.push(course);
+    course = { id: 'curso-' + randomUUID(), schoolId: null, schoolIds: [], teacherId: null, modules: [] }; db.courses.push(course);
   } else if (!canSeeCourse(course, user)) fail(404, 'Curso não encontrado ou indisponível.');
   const title = value => { const result = text(value, 'Título', 160, true); validateLegacy(result); return result; };
   if (action === 'course') {
+    const schoolIds = input.schoolIds ?? (input.schoolId ? [input.schoolId] : []);
+    if (!Array.isArray(schoolIds) || schoolIds.some(id => !db.schools.some(s => s.id === id))) fail(400, 'Selecione escolas válidas.');
+    if (input.schoolIds !== undefined) {
+      const name = title(input.title);
+      Object.assign(course, { schoolId: null, schoolIds: [...new Set(schoolIds)], name, title: name, description: text(input.description || '', 'Descrição'), teacherId: null, instructor: 'Change Skills', studentIds: null, published: input.published === true });
+      return course;
+    }
+    course.schoolId = input.schoolId || course.schoolId;
+    delete course.schoolIds;
     const teacherId = user.role === 'professor' ? user.profileId : input.teacherId || null;
     const teacher = db.teachers.find(t => t.id === teacherId && t.schoolId === course.schoolId);
     if (teacherId && !teacher) fail(400, 'Professor inválido para esta escola.');
@@ -98,7 +106,7 @@ function mutate(data, user, action, input, validateLegacy) {
     if (input.materialId && !material) fail(404, 'Material não encontrado.');
     if (action === 'delete-material') { if (!material) fail(404, 'Material não encontrado.'); parent.materials = parent.materials.filter(m => m.id !== material.id); return { ok: true }; }
     let url = safeUrl(input.url); let file;
-    if (input.fileId) { file = data.files.find(f => f.id === input.fileId && f.schoolId === course.schoolId && (f.ownerId === user.id || material?.fileId === f.id)); if (!file) fail(404, 'Arquivo não encontrado.'); url = file.url; }
+    if (input.fileId) { file = data.files.find(f => f.id === input.fileId && (user.role === 'admin' || f.schoolId === course.schoolId) && (f.ownerId === user.id || material?.fileId === f.id)); if (!file) fail(404, 'Arquivo não encontrado.'); url = file.url; }
     else if (url.startsWith('/api/files/')) fail(400, 'Selecione o arquivo usando o campo de upload.');
     if (!url) fail(400, 'Envie um arquivo ou informe um endereço.');
     const result = material || { id: 'mat-' + randomUUID() };
@@ -121,7 +129,7 @@ function mutate(data, user, action, input, validateLegacy) {
   if (action === 'submit') {
     assertSubmissionWindow(item);
     const notes = text(input.notes || '', 'Resposta', 30000); let file;
-    if (input.fileId) { file = data.files.find(f => f.id === input.fileId && f.ownerId === user.id && f.schoolId === course.schoolId); if (!file) fail(404, 'Arquivo não encontrado.'); }
+    if (input.fileId) { file = data.files.find(f => f.id === input.fileId && f.ownerId === user.id && f.schoolId === user.schoolId); if (!file) fail(404, 'Arquivo não encontrado.'); }
     if (!notes && !file) fail(400, 'Escreva a resposta ou envie um arquivo.');
     item.submissions ||= [];
     const previous = item.submissions.find(s => s.studentId === user.profileId);

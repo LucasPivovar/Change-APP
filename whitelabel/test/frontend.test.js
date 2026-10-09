@@ -117,6 +117,9 @@ test('interface acadêmica renderiza conteúdo escapado, vídeo, progresso e not
       assert.ok(!container.innerHTML.includes('<img src=x'));
       if (view === 'assistir') assert.match(container.innerHTML, /youtube-nocookie\.com\/embed\/dQw4w9WgXcQ/);
       if (view === 'atividade') assert.match(container.innerHTML, /Nota: 0/);
+      if (role === 'escola') {
+        assert.ok(!/data-action="(?:course|module|lesson|activity|delete-course|delete-item|grade|submit)"/.test(container.innerHTML), 'Escola deve consultar cursos sem editar conteúdo ou enviar entregas');
+      }
     }
   }
   app.currentView = 'curso'; app.routeParams = ['curso-inexistente']; app.renderInternalView();

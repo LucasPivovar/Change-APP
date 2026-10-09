@@ -67,7 +67,19 @@ const collections = ['schools', 'students', 'teachers', 'classes', 'lessons', 'm
 function scope(db, user) {
   const out = clone(db);
   if (user.role !== 'admin') {
-    for (const key of collections) if (!['plans'].includes(key)) out[key] = (out[key] || []).filter(row => key === 'schools' ? row.id === user.schoolId : row.schoolId === user.schoolId);
+    for (const key of collections) if (!['plans'].includes(key)) out[key] = (out[key] || []).filter(row => key === 'courses' ? learning.canSeeCourse(row, user) : key === 'schools' ? row.id === user.schoolId : row.schoolId === user.schoolId);
+    for (const course of out.courses) {
+      delete course.schoolIds;
+      course.schoolId = user.schoolId;
+      for (const mod of course.modules || []) {
+        mod.items = (mod.items || []).filter(learning.published);
+        for (const item of mod.items) {
+          const localStudents = new Set(out.students.map(s => s.id));
+          item.submissions = (item.submissions || []).filter(s => localStudents.has(s.studentId));
+          item.completedBy = (item.completedBy || []).filter(id => localStudents.has(id));
+        }
+      }
+    }
     out.adminSettings = {};
     if (user.role === 'aluno') {
       const student = out.students.find(s => s.id === user.profileId);
@@ -174,6 +186,7 @@ function rpc(draft, user, method, args) {
   if (!allowed.includes(method) || !Array.isArray(args) || args.length > 12) fail(400, 'Operação inválida.');
   const read = method.startsWith('get');
   if (read) { DB.getDB = () => scope(draft.db, user); return DB[method](...args) ?? null; }
+  if (user.role !== 'admin' && (['addTeacher', 'updateTeacher', 'deleteTeacher', 'addLesson', 'addMaterial', 'addTask', 'updateTask', 'addEvent', 'updateEvent', 'deleteEvent'].includes(method) || /Course|Module/.test(method))) fail(403, 'Cursos e professores são gerenciados pelo administrador.');
   if (user.role === 'aluno' && !studentWrites.has(method)) fail(403, 'Sem permissão para esta operação.');
   if (user.role === 'professor' && !teacherWrites.has(method)) fail(403, 'Sem permissão para esta operação.');
   if (user.role !== 'admin' && masterWrites.has(method)) fail(403, 'Operação exclusiva do administrador.');
@@ -383,7 +396,7 @@ async function api(req, res, pathname) {
     return result;
   }
   if (pathname === '/api/grades' && req.method === 'POST') {
-    if (!['admin', 'escola', 'professor'].includes(user.role)) fail(403, 'Sem permissão.');
+    if (user.role !== 'admin') fail(403, 'Operação exclusiva do administrador.');
     return transaction(d => {
       const course = d.db.courses.find(c => c.id === input.courseId);
       if (!course || (user.role !== 'admin' && course.schoolId !== user.schoolId) || (user.role === 'professor' && course.teacherId !== user.profileId)) fail(404, 'Curso não encontrado.');
@@ -397,7 +410,7 @@ async function api(req, res, pathname) {
     return transaction(d => {
       const file = d.files.find(f => f.id === input.fileId && f.ownerId === user.id); if (!file) fail(404, 'Arquivo não encontrado.');
       const course = d.db.courses.find(c => c.id === input.courseId);
-      if (!course || (user.role !== 'admin' && course.schoolId !== user.schoolId)) fail(404, 'Curso não encontrado.');
+      if (!course) fail(404, 'Curso não encontrado.');
       if (!learning.canSeeCourse(course, user)) fail(404, 'Curso não encontrado.');
       const item = course.modules?.find(m => m.id === input.moduleId)?.items?.find(i => i.id === input.itemId); if (!item) fail(404, 'Item não encontrado.');
       if (user.role === 'aluno') {
@@ -405,6 +418,7 @@ async function api(req, res, pathname) {
         const submission = item.submissions?.find(s => s.studentId === user.profileId); if (!submission) fail(400, 'Envie a atividade primeiro.'); submission.fileId = file.id; submission.url = file.url;
         if (submission.gradedAt || submission.grade != null) fail(409, 'Esta entrega já foi corrigida. Peça ao professor para reabrir.');
       } else {
+        if (user.role !== 'admin') fail(403, 'Conteúdo gerenciado pelo administrador.');
         if (user.role === 'professor' && course.teacherId !== user.profileId) fail(403, 'Sem permissão.');
         item.materials ||= []; item.materials.push({ id: file.id, title: file.name, url: file.url, size: `${(file.size / 1048576).toFixed(1)} MB`, type: 'Arquivo' });
       }
@@ -449,6 +463,7 @@ async function api(req, res, pathname) {
   if (pathname === '/api/accounts' && req.method === 'POST') {
     if (!['escola', 'admin'].includes(user.role)) fail(403, 'Sem permissão.');
     const role = input.role; if (!['aluno', 'professor', 'escola'].includes(role) || (user.role !== 'admin' && role === 'escola')) fail(400, 'Perfil inválido.');
+    if (user.role === 'escola' && role !== 'aluno') fail(403, 'A escola parceira pode cadastrar somente alunos.');
     const email = emailOf(input.email); const name = String(input.name || '').trim();
     if (!name || name.length > 120) fail(400, 'Informe um nome com até 120 caracteres.');
     validateEmail(email); validatePassword(input.password); validateLegacy({ name, email }); const digest = await passwordHash(input.password);

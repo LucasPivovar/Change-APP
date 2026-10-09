@@ -1,7 +1,7 @@
 # Auditoria do whitelabel — 09/10/2026
 
 ## Resultado
-13 testes automatizados passaram. Banco temporário isolado; nenhum cadastro real foi alterado. As verificações de interface executam os templates, não substituem inspeção visual completa em todos os dispositivos.
+14 testes automatizados passaram. Banco temporário isolado; nenhum cadastro real foi alterado. As verificações de interface executam os templates, não substituem inspeção visual completa em todos os dispositivos.
 
 ## API e fluxos verificados
 | Área / rotas | Evidência | Resultado |
@@ -50,3 +50,14 @@ Não há garantia de ausência de bugs: resultados descrevem os cenários execut
 - No navegador de produção: Esqueci a senha, atualização da página de recuperação e Voltar ao login funcionaram; nenhum erro de console nesses passos.
 - A suíte de API utiliza banco temporário; não altera usuários reais. Não foi realizado percurso visual autenticado de todos os controles com contas reais.
 - Portanto, ainda não é correto declarar que todos os botões e integrações estão funcionando. As pendências da tabela acima continuam abertas.
+
+## Modelo de escola parceira
+- Administrador cadastra cursos centrais e seleciona as escolas autorizadas no formulário do curso.
+- Escolas parceiras cadastram alunos, consultam os cursos liberados e acompanham progresso/entregas da própria escola.
+- Edição de cursos, módulos, materiais e correções é exclusiva do administrador; a API bloqueia edição e cadastro de professores pela escola.
+- Cursos existentes mantêm seu vínculo antigo; editar pelo novo formulário permite selecionar várias escolas sem duplicar o conteúdo.
+- Publicação e revogação de liberação controlam o acesso dos alunos também aos arquivos. Progresso e respostas não são compartilhados entre escolas.
+- Menu de escola/aluno não contém gestão de professores, turmas ou aulas ao vivo. Login de professor existente preservado.
+- Conteúdos de vídeo, atividades e materiais ficam dentro dos cursos. O serviço LiveKit não faz parte deste fluxo.
+- Teste no navegador isolado: login admin, abrir Cursos Globais, criar curso, selecionar uma escola, salvar e verificar o curso na listagem sem erros de console.
+- Publicado na VPS com backup anterior dos arquivos e banco; serviço whitelabel e aplicação principal ativos.
