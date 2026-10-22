@@ -24,6 +24,7 @@
             </label>
             <label class="audio-toggle"><input type="checkbox" v-model="translationEnabled" @change="saveTranslationPreference" /> Tradução nas respostas</label>
             <label class="audio-toggle"><input type="checkbox" v-model="speechEnabled" @change="saveSpeechPreference" /> Áudio nas respostas</label>
+            <label class="audio-toggle"><input type="checkbox" v-model="hintsEnabled" @change="saveHintsPreference" /> Exibir sugestões de resposta (Dicas)</label>
           </div>
         </div>
       </div>
@@ -43,7 +44,15 @@
         <div v-for="msg in messages" :key="msg.id" :class="['message-row', msg.role === 'user' ? 'mine' : 'theirs']">
           <div v-if="msg.role === 'assistant'" class="bot-avatar-wrapper"><img src="../assets/2.png" alt="Camaleão" class="msg-avatar" /></div>
           <div class="message-bubble" :class="msg.role === 'user' ? 'bubble-mine' : 'bubble-bot'">
-            <p>{{ msg.content }}</p>
+            <p>{{ msg.role === 'assistant' ? parseMessageParts(msg.content).dialogue : msg.content }}</p>
+            <!-- Card de Sugestão/Dica separado e estilizado embaixo -->
+            <div v-if="hintsEnabled && msg.role === 'assistant' && parseMessageParts(msg.content).hint" class="hint-card">
+              <div class="hint-card-header">
+                <LightbulbIcon :size="13" />
+                <span>Sugestão de resposta</span>
+              </div>
+              <p class="hint-card-text">{{ parseMessageParts(msg.content).hint }}</p>
+            </div>
             <div v-if="msg.translation" class="translation-box">{{ msg.translation }}</div>
             <span class="message-time">{{ new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</span>
           </div>
@@ -158,6 +167,25 @@ const isMenuOpen = ref(false)
 const isSettingsOpen = ref(false)
 const tips = ref([])
 const defaultLanguage = ref(currentUser()?.defaultLanguage || 'pt')
+
+// Hints preference & Message Parser
+const hintsEnabled = ref(localStorage.getItem('change-skills-hints-enabled') !== 'false')
+const saveHintsPreference = () => {
+  localStorage.setItem('change-skills-hints-enabled', hintsEnabled.value ? 'true' : 'false')
+}
+
+const parseMessageParts = (content) => {
+  if (!content) return { dialogue: '', hint: '' }
+  const match = content.match(/\((?:Dica|Tip|Conseil|Consejo):\s*([\s\S]*?)\)/i) ||
+                content.match(/(?:Dica|Tip|Conseil|Consejo):\s*([\s\S]*)$/i)
+  if (match) {
+    const hint = match[1].trim()
+    const dialogue = content.replace(match[0], '').trim()
+    return { dialogue, hint }
+  }
+  return { dialogue: content, hint: '' }
+}
+
 const speechEnabled = ref(localStorage.getItem('change-skills-speech-enabled') === 'true')
 const translationEnabled = ref(localStorage.getItem('change-skills-translation-enabled') === 'true')
 const listening = ref(false)
@@ -350,6 +378,49 @@ const getNaturalVoice = (langCode) => {
   return bestVoice || matching[0]
 }
 
+// Pre-unlocked Studio Audio Player
+let studioAudio = null
+const getStudioAudio = () => {
+  if (typeof window === 'undefined') return null
+  if (!studioAudio) studioAudio = new Audio()
+  return studioAudio
+}
+
+if (typeof window !== 'undefined') {
+  const unlockAudio = () => {
+    const a = getStudioAudio()
+    if (a) {
+      a.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='
+      a.play().catch(() => {})
+    }
+  }
+  document.addEventListener('click', unlockAudio, { once: true })
+  document.addEventListener('touchstart', unlockAudio, { once: true })
+}
+
+const fallbackSpeechSynthesis = (text, targetLang, onEnd) => {
+  if (!window.speechSynthesis) {
+    if (onEnd) onEnd()
+    return
+  }
+  window.speechSynthesis.cancel()
+  const utterance = new SpeechSynthesisUtterance(text)
+  const voice = getNaturalVoice(targetLang)
+  if (voice) {
+    utterance.voice = voice
+    utterance.lang = voice.lang || targetLang
+  } else {
+    utterance.lang = targetLang
+  }
+  utterance.rate = 0.96
+  utterance.pitch = 1.0
+  if (onEnd) {
+    utterance.onend = () => { onEnd() }
+    utterance.onerror = () => { onEnd() }
+  }
+  window.speechSynthesis.speak(utterance)
+}
+
 const speak = (text, onEnd = null) => {
   if (!speechEnabled.value || !text) {
     if (onEnd) onEnd()
@@ -357,14 +428,9 @@ const speak = (text, onEnd = null) => {
   }
   localStorage.setItem('change-skills-speech-enabled', 'true')
 
-  if (typeof window === 'undefined' || !window.speechSynthesis) {
-    if (onEnd) onEnd()
-    return
-  }
-
-  window.speechSynthesis.cancel()
-
-  const clean = text
+  // Camaleão fala APENAS a fala do diálogo, NUNCA a dica!
+  const dialogueOnly = parseMessageParts(text).dialogue || text
+  const clean = dialogueOnly
     .replace(/[*_#`~>]/g, '')
     .replace(/https?:\/\/\S+/g, '')
     .replace(/\s+/g, ' ')
@@ -376,23 +442,32 @@ const speak = (text, onEnd = null) => {
   }
 
   const targetLang = detectSpeechLanguage(clean)
-  const utterance = new SpeechSynthesisUtterance(clean)
-  const voice = getNaturalVoice(targetLang)
-  if (voice) {
-    utterance.voice = voice
-    utterance.lang = voice.lang || targetLang
-  } else {
-    utterance.lang = targetLang
-  }
-  utterance.rate = 0.95
-  utterance.pitch = 1.0
+  const langParam = targetLang.slice(0, 2).toLowerCase()
 
-  if (onEnd) {
-    utterance.onend = () => { onEnd() }
-    utterance.onerror = () => { onEnd() }
+  // Tentativa 1: Áudio Humano de Estúdio (Google Neural via Backend)
+  const audio = getStudioAudio()
+  if (audio) {
+    audio.src = `/api/chats/tts?lang=${encodeURIComponent(langParam)}&text=${encodeURIComponent(clean.slice(0, 300))}`
+    let finished = false
+    const finish = () => {
+      if (finished) return
+      finished = true
+      if (onEnd) onEnd()
+    }
+    audio.onended = finish
+    audio.onerror = () => {
+      fallbackSpeechSynthesis(clean, targetLang, finish)
+    }
+    const p = audio.play()
+    if (p !== undefined) {
+      p.catch(() => {
+        fallbackSpeechSynthesis(clean, targetLang, finish)
+      })
+    }
+    return
   }
 
-  window.speechSynthesis.speak(utterance)
+  fallbackSpeechSynthesis(clean, targetLang, onEnd)
 }
 
 const toggleVoice = () => {
