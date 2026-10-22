@@ -278,12 +278,46 @@ const saveSpeechPreference = () => {
 const saveTranslationPreference = () => {
   localStorage.setItem('change-skills-translation-enabled', translationEnabled.value ? 'true' : 'false')
 }
-// Speech Synthesis Engine with Multilingual Neural Voices
-const detectSpeechLanguage = (text) => {
-  const practiceLang = (props.language || '').toLowerCase()
-  if (practiceLang === 'en' || practiceLang === 'es' || practiceLang === 'fr') {
-    return practiceLang === 'en' ? 'en-US' : practiceLang === 'es' ? 'es-ES' : 'fr-FR'
+// Speech Synthesis Engine with Dynamic Text-Content Language Detection
+let cachedVoices = []
+const loadVoices = () => {
+  if (typeof window !== 'undefined' && window.speechSynthesis) {
+    cachedVoices = window.speechSynthesis.getVoices()
   }
+}
+if (typeof window !== 'undefined' && window.speechSynthesis) {
+  loadVoices()
+  window.speechSynthesis.onvoiceschanged = loadVoices
+}
+
+const detectSpeechLanguage = (text) => {
+  const t = (text || '').toLowerCase()
+
+  // Portuguese markers: vocabulary & accents
+  const ptWords = ['você', 'olá', 'em', 'inglês', 'francês', 'espanhol', 'cumprimentar', 'dizer', 'para', 'como', 'vamos', 'tentar', 'comigo', 'pode', 'gostaria', 'pedir', 'aqui', 'estou', 'muito', 'não', 'bom', 'boa', 'dica']
+  const ptAccents = /[áéíóúâêîôûãõçà]/
+  
+  let ptHits = 0
+  for (const w of ptWords) {
+    if (new RegExp('\\b' + w + '\\b', 'i').test(t)) ptHits++
+  }
+  if (ptAccents.test(t)) ptHits += 2
+
+  const enWords = ['the', 'you', 'hello', 'hi', 'welcome', 'how', 'can', 'help', 'today', 'would', 'like', 'order', 'please', 'food', 'drink', 'water', 'cafeteria', 'school', 'what', 'thank']
+  let enHits = 0
+  for (const w of enWords) {
+    if (new RegExp('\\b' + w + '\\b', 'i').test(t)) enHits++
+  }
+
+  // If text has significant Portuguese guidance, speak with native Portuguese voice
+  if (ptHits > enHits && ptHits >= 2) {
+    return 'pt-BR'
+  }
+
+  const practiceLang = (props.language || '').toLowerCase()
+  if (practiceLang === 'en') return 'en-US'
+  if (practiceLang === 'es') return 'es-ES'
+  if (practiceLang === 'fr') return 'fr-FR'
   if (defaultLanguage.value === 'en') return 'en-US'
   if (defaultLanguage.value === 'es') return 'es-ES'
   if (defaultLanguage.value === 'fr') return 'fr-FR'
@@ -291,8 +325,8 @@ const detectSpeechLanguage = (text) => {
 }
 
 const getNaturalVoice = (langCode) => {
-  if (!window.speechSynthesis) return null
-  const voices = window.speechSynthesis.getVoices()
+  if (typeof window === 'undefined' || !window.speechSynthesis) return null
+  const voices = cachedVoices.length ? cachedVoices : window.speechSynthesis.getVoices()
   const targetPrefix = langCode.slice(0, 2).toLowerCase()
   const matching = voices.filter(v => (v.lang || '').toLowerCase().startsWith(targetPrefix))
   if (!matching.length) return null
