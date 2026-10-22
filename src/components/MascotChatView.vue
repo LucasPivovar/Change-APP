@@ -91,8 +91,8 @@
       </div>
 
       <div class="call-body">
-        <div class="call-avatar-wrapper">
-          <img src="../assets/2.png" alt="Camaleão IA" class="call-avatar-img" :class="{ 'talking': callState === 'speaking' }" />
+        <div class="call-avatar-wrapper" :class="callState">
+          <img src="../assets/2.png" alt="Camaleão IA" class="call-avatar-img" :class="callState" />
         </div>
         <h2 class="call-title">Camaleão IA</h2>
         <p class="call-subtitle-status">{{ callHelperStatus }}</p>
@@ -265,7 +265,22 @@ const saveSpeechPreference = () => {
 const saveTranslationPreference = () => {
   localStorage.setItem('change-skills-translation-enabled', translationEnabled.value ? 'true' : 'false')
 }
-// Detection of actual spoken language for human-like phonetics
+// Natural Audio & Speech Synthesis Engine
+let currentAudio = null
+
+const stopSpeech = () => {
+  if (currentAudio) {
+    try {
+      currentAudio.pause()
+      currentAudio.currentTime = 0
+    } catch {}
+    currentAudio = null
+  }
+  if (typeof window !== 'undefined' && window.speechSynthesis) {
+    window.speechSynthesis.cancel()
+  }
+}
+
 const detectSpeechLanguage = (text) => {
   const practiceLang = (props.language || '').toLowerCase()
   if (practiceLang === 'en' || practiceLang === 'es' || practiceLang === 'fr') {
@@ -277,7 +292,6 @@ const detectSpeechLanguage = (text) => {
   return 'pt-BR'
 }
 
-// Select Ultra Natural Voice
 const getNaturalVoice = (langCode) => {
   if (!window.speechSynthesis) return null
   const voices = window.speechSynthesis.getVoices()
@@ -304,15 +318,11 @@ const getNaturalVoice = (langCode) => {
   return bestVoice || matching[0]
 }
 
-const speak = (text, onEnd = null) => {
-  if (!speechEnabled.value || !window.speechSynthesis || !text) {
+const fallbackSpeechSynthesis = (text, targetLang, onEnd) => {
+  if (!window.speechSynthesis) {
     if (onEnd) onEnd()
     return
   }
-  localStorage.setItem('change-skills-speech-enabled', 'true')
-  window.speechSynthesis.cancel()
-
-  const targetLang = detectSpeechLanguage(text)
   const utterance = new SpeechSynthesisUtterance(text)
   const voice = getNaturalVoice(targetLang)
   if (voice) {
@@ -329,6 +339,59 @@ const speak = (text, onEnd = null) => {
   }
   window.speechSynthesis.speak(utterance)
 }
+
+const speak = (text, onEnd = null) => {
+  if (!speechEnabled.value || !text) {
+    if (onEnd) onEnd()
+    return
+  }
+  localStorage.setItem('change-skills-speech-enabled', 'true')
+  stopSpeech()
+
+  const clean = text
+    .replace(/[*_#`~>]/g, '')
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (!clean) {
+    if (onEnd) onEnd()
+    return
+  }
+
+  const langCode = detectSpeechLanguage(clean)
+  const langParam = langCode.slice(0, 2).toLowerCase()
+
+  // High-fidelity natural neural audio from Google TTS proxy
+  const ttsUrl = `/api/chats/tts?lang=${encodeURIComponent(langParam)}&text=${encodeURIComponent(clean.slice(0, 300))}`
+  const audio = new Audio(ttsUrl)
+  currentAudio = audio
+
+  let finished = false
+  const finish = () => {
+    if (finished) return
+    finished = true
+    currentAudio = null
+    if (onEnd) onEnd()
+  }
+
+  audio.onended = finish
+  audio.onerror = (e) => {
+    console.warn('Backend natural audio error, falling back:', e)
+    currentAudio = null
+    fallbackSpeechSynthesis(clean, langCode, finish)
+  }
+
+  const p = audio.play()
+  if (p !== undefined) {
+    p.catch((err) => {
+      console.warn('Autoplay restricted, falling back to Web Speech:', err)
+      currentAudio = null
+      fallbackSpeechSynthesis(clean, langCode, finish)
+    })
+  }
+}
+
 const toggleVoice = () => {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
   if (!SpeechRecognition) {
@@ -559,7 +622,7 @@ const startVoiceCall = async () => {
   callState.value = 'connecting'
   callDurationSeconds.value = 0
   callLastSpeaker.value = 'assistant'
-  callSubtitleText.value = 'Conectando Ã  chamada...'
+  callSubtitleText.value = 'Conectando à chamada...'
 
   if (callInterval) clearInterval(callInterval)
   callInterval = setInterval(() => {
@@ -578,10 +641,14 @@ const startVoiceCall = async () => {
     startListeningCycle()
 
     if (!messages.value.length) {
-      const greeting = defaultLanguage.value === 'en' ? 'Hello! I am ready to talk. What would you like to practice today?'
-        : defaultLanguage.value === 'es' ? 'Â¡Hola! Estoy listo para hablar. Â¿De quÃ© quieres hablar hoy?'
-        : defaultLanguage.value === "fr" ? "Bonjour ! Je suis pret a discuter. De quoi voulez-vous parler aujourd'hui ?"
-        : 'OlÃ¡! Estou pronto para conversar. Sobre o que você quer praticar hoje?'
+      const practiceLang = (props.language || defaultLanguage.value || 'pt').toLowerCase()
+      const greeting = practiceLang === 'en'
+        ? 'Hello! I am ready to talk. What would you like to practice today?'
+        : practiceLang === 'es'
+        ? '¡Hola! Estoy listo para hablar. ¿De qué quieres hablar hoy?'
+        : practiceLang === 'fr'
+        ? 'Bonjour ! Je suis prêt à discuter. De quoi voulez-vous parler aujourd’hui ?'
+        : 'Olá! Estou pronto para conversar. Sobre o que você quer praticar hoje?'
       callState.value = 'speaking'
       callSubtitleText.value = greeting
       speak(greeting, () => {
@@ -589,11 +656,11 @@ const startVoiceCall = async () => {
       })
     } else {
       callState.value = 'listening'
-      callSubtitleText.value = 'Pode falar...'
+      callSubtitleText.value = props.language === 'en' ? 'You can speak...' : 'Pode falar...'
     }
   } catch (err) {
     console.error('Call mic error:', err)
-    error.value = 'NÃ£o foi possÃ­vel acessar o microfone para a ligação.'
+    error.value = 'Não foi possível acessar o microfone para a ligação.'
     endVoiceCall()
   }
 }
@@ -769,9 +836,7 @@ const endVoiceCall = () => {
   if (callAudioContext && callAudioContext.state !== 'closed') {
     try { callAudioContext.close() } catch {}
   }
-  if (window.speechSynthesis) {
-    window.speechSynthesis.cancel()
-  }
+  stopSpeech()
   scrollToBottom()
 }
 

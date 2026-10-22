@@ -1,4 +1,4 @@
-const CACHE_NAME = 'change-skills-cache-v5';
+const CACHE_NAME = 'change-skills-cache-v6';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
