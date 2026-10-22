@@ -87,27 +87,28 @@ html.font-scale-large {
 
 /* Call Button in Chat Header */
 .call-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
   background: #22c55e;
   color: white;
   border: none;
-  border-radius: 20px;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   margin-right: 6px;
-  transition: all 0.2s ease;
-  box-shadow: 0 3px 10px rgba(34, 197, 94, 0.25);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 3px 10px rgba(34, 197, 94, 0.3);
+  flex-shrink: 0;
+  padding: 0;
 }
 .call-btn:hover {
   background: #16a34a;
-  transform: translateY(-1px);
+  transform: scale(1.08);
 }
 .call-btn:active {
-  transform: scale(0.96);
+  transform: scale(0.92);
 }
 
 /* Voice Call Full-Screen Overlay */
@@ -367,4 +368,31 @@ html.font-scale-large {
 .call-action-btn.end-call-btn:hover {
   background: #dc2626;
   transform: translateY(-2px);
+}
+/* Send Turn Button in Voice Call */
+.call-action-btn.send-turn-btn {
+  background: #22c55e;
+  color: #ffffff;
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+}
+.call-action-btn.send-turn-btn:hover {
+  background: #16a34a;
+  transform: scale(1.08);
+}
+
+/* Live Voice Volume Wave Indicator */
+.call-voice-wave-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 44px;
+  margin-bottom: 16px;
+}
+.call-voice-wave-bar {
+  width: 4px;
+  background: #22c55e;
+  border-radius: 4px;
+  transition: height 0.08s ease;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
 }

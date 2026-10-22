@@ -3,9 +3,8 @@
     <header class="chat-header">
       <button class="back-btn" aria-label="Voltar" @click="$emit('goBack')"><ChevronLeftIcon :size="24" /></button>
       <div class="user-info"><div class="mascot-avatar-wrapper"><img src="../assets/2.png" alt="" class="avatar" /></div><span class="user-name">Camaleão IA</span></div>
-      <button type="button" class="call-btn" aria-label="Iniciar Ligação" title="Ligar para o Camaleão" :disabled="!ready || scenarioComplete" @click="startVoiceCall">
-        <PhoneIcon :size="16" />
-        <span>Ligar</span>
+      <button type="button" class="call-btn" aria-label="Ligar para o Camaleão" title="Ligar para o Camaleão" :disabled="!ready" @click="startVoiceCall">
+        <PhoneIcon :size="18" />
       </button>
       <div class="chat-menu-wrapper">
         <button class="menu-dot-btn" aria-label="Opções do chat" @click="isMenuOpen = !isMenuOpen"><MoreVerticalIcon :size="22" /></button>
@@ -92,15 +91,26 @@
 
       <div class="call-body">
         <div class="call-avatar-wrapper" :class="callState">
-          <img src="../assets/2.png" alt="Camaleão IA" class="call-avatar-img" :class="callState" />
+          <!-- Transição de pose: Boca aberta falando vs Sorrindo ouvindo -->
+          <img v-if="callState === 'speaking'" src="../assets/camaleao-call.jpg" alt="Camaleão IA Falando" class="call-avatar-img speaking" />
+          <img v-else src="../assets/2.png" alt="Camaleão IA Ouvindo" class="call-avatar-img" :class="callState" />
         </div>
         <h2 class="call-title">Camaleão IA</h2>
         <p class="call-subtitle-status">{{ callHelperStatus }}</p>
 
+        <!-- Ondas sonoras ao vivo quando o aluno fala -->
+        <div v-if="callState === 'listening'" class="call-voice-wave-container" title="Microfone captando sua voz">
+          <div class="call-voice-wave-bar" :style="{ height: Math.min(26, Math.max(6, micVolumeLevel * 250)) + 'px' }"></div>
+          <div class="call-voice-wave-bar" :style="{ height: Math.min(34, Math.max(8, micVolumeLevel * 400)) + 'px' }"></div>
+          <div class="call-voice-wave-bar" :style="{ height: Math.min(42, Math.max(10, micVolumeLevel * 550)) + 'px' }"></div>
+          <div class="call-voice-wave-bar" :style="{ height: Math.min(34, Math.max(8, micVolumeLevel * 400)) + 'px' }"></div>
+          <div class="call-voice-wave-bar" :style="{ height: Math.min(26, Math.max(6, micVolumeLevel * 250)) + 'px' }"></div>
+        </div>
+
         <!-- Legendas de Acessibilidade / Live Subtitles -->
         <div v-if="callSubtitlesEnabled" class="call-subtitles-card">
           <div v-if="callLastSpeaker" class="call-subtitle-speaker">{{ callLastSpeaker === 'user' ? 'Você:' : 'Camaleão:' }}</div>
-          <p class="call-subtitle-message">{{ callSubtitleText || 'Fale normalmente... Silêncio de 2s envia sua mensagem.' }}</p>
+          <p class="call-subtitle-message">{{ callSubtitleText || (props.language === 'en' ? 'Speak naturally... Pausing for 1.5s sends your message.' : 'Fale normalmente... Silêncio de 1.5s envia sua mensagem.') }}</p>
         </div>
       </div>
 
@@ -108,6 +118,9 @@
         <button type="button" class="call-action-btn mute-toggle" :class="{ 'is-muted': isCallMuted }" @click="toggleCallMute" :title="isCallMuted ? 'Desmutar microfone' : 'Mutar microfone'">
           <MicOffIcon v-if="isCallMuted" :size="24" />
           <MicIcon v-else :size="24" />
+        </button>
+        <button v-if="callState === 'listening'" type="button" class="call-action-btn send-turn-btn" @click="triggerCallTurnProcessing" title="Enviar o que falei agora">
+          <SendIcon :size="22" />
         </button>
         <button type="button" class="call-action-btn end-call-btn" @click="endVoiceCall" title="Encerrar ligação">
           <PhoneOffIcon :size="26" />
@@ -265,22 +278,7 @@ const saveSpeechPreference = () => {
 const saveTranslationPreference = () => {
   localStorage.setItem('change-skills-translation-enabled', translationEnabled.value ? 'true' : 'false')
 }
-// Natural Audio & Speech Synthesis Engine
-let currentAudio = null
-
-const stopSpeech = () => {
-  if (currentAudio) {
-    try {
-      currentAudio.pause()
-      currentAudio.currentTime = 0
-    } catch {}
-    currentAudio = null
-  }
-  if (typeof window !== 'undefined' && window.speechSynthesis) {
-    window.speechSynthesis.cancel()
-  }
-}
-
+// Speech Synthesis Engine with Multilingual Neural Voices
 const detectSpeechLanguage = (text) => {
   const practiceLang = (props.language || '').toLowerCase()
   if (practiceLang === 'en' || practiceLang === 'es' || practiceLang === 'fr') {
@@ -318,35 +316,19 @@ const getNaturalVoice = (langCode) => {
   return bestVoice || matching[0]
 }
 
-const fallbackSpeechSynthesis = (text, targetLang, onEnd) => {
-  if (!window.speechSynthesis) {
-    if (onEnd) onEnd()
-    return
-  }
-  const utterance = new SpeechSynthesisUtterance(text)
-  const voice = getNaturalVoice(targetLang)
-  if (voice) {
-    utterance.voice = voice
-    utterance.lang = voice.lang || targetLang
-  } else {
-    utterance.lang = targetLang
-  }
-  utterance.rate = 0.95
-  utterance.pitch = 1.0
-  if (onEnd) {
-    utterance.onend = () => { onEnd() }
-    utterance.onerror = () => { onEnd() }
-  }
-  window.speechSynthesis.speak(utterance)
-}
-
 const speak = (text, onEnd = null) => {
   if (!speechEnabled.value || !text) {
     if (onEnd) onEnd()
     return
   }
   localStorage.setItem('change-skills-speech-enabled', 'true')
-  stopSpeech()
+
+  if (typeof window === 'undefined' || !window.speechSynthesis) {
+    if (onEnd) onEnd()
+    return
+  }
+
+  window.speechSynthesis.cancel()
 
   const clean = text
     .replace(/[*_#`~>]/g, '')
@@ -359,37 +341,24 @@ const speak = (text, onEnd = null) => {
     return
   }
 
-  const langCode = detectSpeechLanguage(clean)
-  const langParam = langCode.slice(0, 2).toLowerCase()
+  const targetLang = detectSpeechLanguage(clean)
+  const utterance = new SpeechSynthesisUtterance(clean)
+  const voice = getNaturalVoice(targetLang)
+  if (voice) {
+    utterance.voice = voice
+    utterance.lang = voice.lang || targetLang
+  } else {
+    utterance.lang = targetLang
+  }
+  utterance.rate = 0.95
+  utterance.pitch = 1.0
 
-  // High-fidelity natural neural audio from Google TTS proxy
-  const ttsUrl = `/api/chats/tts?lang=${encodeURIComponent(langParam)}&text=${encodeURIComponent(clean.slice(0, 300))}`
-  const audio = new Audio(ttsUrl)
-  currentAudio = audio
-
-  let finished = false
-  const finish = () => {
-    if (finished) return
-    finished = true
-    currentAudio = null
-    if (onEnd) onEnd()
+  if (onEnd) {
+    utterance.onend = () => { onEnd() }
+    utterance.onerror = () => { onEnd() }
   }
 
-  audio.onended = finish
-  audio.onerror = (e) => {
-    console.warn('Backend natural audio error, falling back:', e)
-    currentAudio = null
-    fallbackSpeechSynthesis(clean, langCode, finish)
-  }
-
-  const p = audio.play()
-  if (p !== undefined) {
-    p.catch((err) => {
-      console.warn('Autoplay restricted, falling back to Web Speech:', err)
-      currentAudio = null
-      fallbackSpeechSynthesis(clean, langCode, finish)
-    })
-  }
+  window.speechSynthesis.speak(utterance)
 }
 
 const toggleVoice = () => {
@@ -582,6 +551,7 @@ const callState = ref('connecting')
 const callLastSpeaker = ref('')
 const callSubtitleText = ref('')
 const isCallMuted = ref(false)
+const micVolumeLevel = ref(0)
 const callDurationSeconds = ref(0)
 let callInterval = null
 
@@ -640,24 +610,23 @@ const startVoiceCall = async () => {
 
     startListeningCycle()
 
-    if (!messages.value.length) {
-      const practiceLang = (props.language || defaultLanguage.value || 'pt').toLowerCase()
-      const greeting = practiceLang === 'en'
-        ? 'Hello! I am ready to talk. What would you like to practice today?'
-        : practiceLang === 'es'
-        ? '¡Hola! Estoy listo para hablar. ¿De qué quieres hablar hoy?'
-        : practiceLang === 'fr'
-        ? 'Bonjour ! Je suis prêt à discuter. De quoi voulez-vous parler aujourd’hui ?'
-        : 'Olá! Estou pronto para conversar. Sobre o que você quer praticar hoje?'
-      callState.value = 'speaking'
-      callSubtitleText.value = greeting
-      speak(greeting, () => {
-        if (isCallActive.value) callState.value = 'listening'
-      })
-    } else {
-      callState.value = 'listening'
-      callSubtitleText.value = props.language === 'en' ? 'You can speak...' : 'Pode falar...'
-    }
+    const practiceLang = (props.language || defaultLanguage.value || 'pt').toLowerCase()
+    const greeting = practiceLang === 'en'
+      ? (messages.value.length ? 'I am here! What would you like to say?' : 'Hello! I am ready to talk. What would you like to practice today?')
+      : practiceLang === 'es'
+      ? (messages.value.length ? '¡Aquí estoy! ¿Qué quieres decir?' : '¡Hola! Estoy listo para hablar. ¿De qué quieres hablar hoy?')
+      : practiceLang === 'fr'
+      ? (messages.value.length ? 'Je suis là ! Que voulez-vous dire ?' : 'Bonjour ! Je suis prêt à discuter. De quoi voulez-vous parler aujourd’hui ?')
+      : (messages.value.length ? 'Estou aqui! O que você gostaria de dizer?' : 'Olá! Estou pronto para conversar. Sobre o que você quer praticar hoje?')
+
+    callState.value = 'speaking'
+    callSubtitleText.value = greeting
+    speak(greeting, () => {
+      if (isCallActive.value) {
+        callState.value = 'listening'
+        callSubtitleText.value = practiceLang === 'en' ? 'You can speak...' : 'Pode falar...'
+      }
+    })
   } catch (err) {
     console.error('Call mic error:', err)
     error.value = 'Não foi possível acessar o microfone para a ligação.'
@@ -694,7 +663,8 @@ const startListeningCycle = () => {
     for (let i = 0; i < bufferLength; i++) sum += dataArray[i]
     const volume = (sum / bufferLength) / 255
 
-    const SPEECH_THRESHOLD = 0.04
+    micVolumeLevel.value = volume
+    const SPEECH_THRESHOLD = 0.012
 
     if (volume > SPEECH_THRESHOLD) {
       callUserSpoke = true
@@ -702,7 +672,7 @@ const startListeningCycle = () => {
     } else if (callUserSpoke) {
       if (!callSilenceStart) {
         callSilenceStart = Date.now()
-      } else if (Date.now() - callSilenceStart > 2200) {
+      } else if (Date.now() - callSilenceStart > 1600) {
         triggerCallTurnProcessing()
       }
     }
