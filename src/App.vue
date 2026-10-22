@@ -109,11 +109,27 @@ const handleModeSelect = (mode) => {
     currentForm.value = 'group-chat'
   } else if (mode === 'student') {
     currentForm.value = 'student-match'
-  } else if (mode === 'mascot') {
+  } else if (mode === 'daily-practice' || mode === 'mascot') {
+    // 1. Pratica Diaria: Cenarios guiados (ex: lanche na escola)
     activeAiChatId.value = null
     activeFriendConversationId.value = null
     selectedScenario.value = null
+    startWithVoiceCall.value = false
     currentForm.value = 'practice-scenarios'
+  } else if (mode === 'call') {
+    // 2. Call com o Camaleao: Chamada de voz ao vivo livre
+    activeAiChatId.value = null
+    activeFriendConversationId.value = null
+    selectedScenario.value = null
+    startWithVoiceCall.value = true
+    currentForm.value = 'mascot-chat'
+  } else if (mode === 'free-chat') {
+    // 3. Chat Livre com o Camaleao: Conversa aberta sem roteiro pre-determinado
+    activeAiChatId.value = null
+    activeFriendConversationId.value = null
+    selectedScenario.value = null
+    startWithVoiceCall.value = false
+    currentForm.value = 'mascot-chat'
   }
 }
 

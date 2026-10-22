@@ -413,6 +413,10 @@ const speak = (text, onEnd = null) => {
   }
 
   audio.src = `/api/chats/tts?lang=${encodeURIComponent(langParam)}&text=${encodeURIComponent(clean.slice(0, 300))}`
+  audio.playbackRate = 1.16
+  audio.onloadedmetadata = () => {
+    try { audio.playbackRate = 1.16 } catch {}
+  }
 
   let finished = false
   const finish = () => {
