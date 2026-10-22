@@ -34,6 +34,7 @@ const inviteGroupCode = ref(urlParams.get('group'))
 const verifyEmailToken = ref(urlParams.get('verify')?.replace(/\s/g, ''))
 const resetPasswordToken = ref(urlParams.get('reset')?.replace(/\s/g, ''))
 const selectedScenario = ref(null)
+const startWithVoiceCall = ref(false)
 const authMessage = ref('')
 let verifiedTimer = null
 const clearAuthUrl = () => { window.history.replaceState({}, '', window.location.pathname) }
@@ -271,6 +272,7 @@ const handleGoBack = () => {
       :language="selectedLanguage || 'en'"
       :courseId="selectedCourse || 'general'"
       :scenario="selectedScenario"
+      :startInCall="startWithVoiceCall"
       @created="activeAiChatId = $event"
       @history="currentForm = 'conversations'"
       @goBack="handleGoBack"

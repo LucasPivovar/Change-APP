@@ -3,9 +3,6 @@
     <header class="chat-header">
       <button class="back-btn" aria-label="Voltar" @click="$emit('goBack')"><ChevronLeftIcon :size="24" /></button>
       <div class="user-info"><div class="mascot-avatar-wrapper"><img src="../assets/2.png" alt="" class="avatar" /></div><span class="user-name">Camaleão IA</span></div>
-      <button type="button" class="call-btn" aria-label="Ligar para o Camaleão" title="Ligar para o Camaleão" :disabled="!ready" @click="startVoiceCall">
-        <PhoneIcon :size="18" />
-      </button>
       <div class="chat-menu-wrapper">
         <button class="menu-dot-btn" aria-label="Opções do chat" @click="isMenuOpen = !isMenuOpen"><MoreVerticalIcon :size="22" /></button>
         <div v-if="isMenuOpen" class="chat-menu">
@@ -45,6 +42,19 @@
           <div v-if="msg.role === 'assistant'" class="bot-avatar-wrapper"><img src="../assets/2.png" alt="Camaleão" class="msg-avatar" /></div>
           <div class="message-bubble" :class="msg.role === 'user' ? 'bubble-mine' : 'bubble-bot'">
             <p>{{ msg.role === 'assistant' ? parseMessageParts(msg.content).dialogue : msg.content }}</p>
+            <!-- Botão de Ouvir em Voz Humana de Estúdio -->
+            <button
+              v-if="msg.role === 'assistant'"
+              type="button"
+              class="msg-audio-play-btn"
+              :class="{ 'is-playing': currentlyPlayingId === msg.id }"
+              @click.stop="playMessageAudio(msg)"
+              :title="currentlyPlayingId === msg.id ? 'Pausar áudio' : 'Ouvir pronúncia natural'"
+            >
+              <Volume2Icon v-if="currentlyPlayingId !== msg.id" :size="13" />
+              <VolumeXIcon v-else :size="13" />
+              <span>{{ currentlyPlayingId === msg.id ? 'Ouvindo...' : 'Ouvir' }}</span>
+            </button>
             <!-- Card de Sugestão/Dica separado e estilizado embaixo -->
             <div v-if="hintsEnabled && msg.role === 'assistant' && parseMessageParts(msg.content).hint" class="hint-card">
               <div class="hint-card-header">
@@ -140,14 +150,15 @@
 </template>
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { ChevronLeftIcon, HistoryIcon, LanguagesIcon, LightbulbIcon, MicIcon, MicOffIcon, MoreVerticalIcon, PhoneIcon, PhoneOffIcon, SendIcon, SettingsIcon } from '@lucide/vue'
+import { ChevronLeftIcon, HistoryIcon, LanguagesIcon, LightbulbIcon, MicIcon, MicOffIcon, MoreVerticalIcon, PhoneIcon, PhoneOffIcon, SendIcon, SettingsIcon, Volume2 as Volume2Icon, VolumeX as VolumeXIcon } from '@lucide/vue'
 import { chatApi, currentUser, profileApi } from '../services/chatApi'
 import { scenarioScoreKey } from '../data/practiceScenarios.js'
 const props = defineProps({
   chatId: { type: String, default: null },
   language: { type: String, default: 'en' },
   courseId: { type: String, default: 'general' },
-  scenario: { type: Object, default: null }
+  scenario: { type: Object, default: null },
+  startInCall: { type: Boolean, default: false }
 })
 const emit = defineEmits(['goBack', 'history', 'created'])
 const messages = ref([])
@@ -306,86 +317,19 @@ const saveSpeechPreference = () => {
 const saveTranslationPreference = () => {
   localStorage.setItem('change-skills-translation-enabled', translationEnabled.value ? 'true' : 'false')
 }
-// Speech Synthesis Engine with Dynamic Text-Content Language Detection
-let cachedVoices = []
-const loadVoices = () => {
-  if (typeof window !== 'undefined' && window.speechSynthesis) {
-    cachedVoices = window.speechSynthesis.getVoices()
-  }
-}
-if (typeof window !== 'undefined' && window.speechSynthesis) {
-  loadVoices()
-  window.speechSynthesis.onvoiceschanged = loadVoices
-}
-
-const detectSpeechLanguage = (text) => {
-  const t = (text || '').toLowerCase()
-
-  // Portuguese markers: vocabulary & accents
-  const ptWords = ['você', 'olá', 'em', 'inglês', 'francês', 'espanhol', 'cumprimentar', 'dizer', 'para', 'como', 'vamos', 'tentar', 'comigo', 'pode', 'gostaria', 'pedir', 'aqui', 'estou', 'muito', 'não', 'bom', 'boa', 'dica']
-  const ptAccents = /[áéíóúâêîôûãõçà]/
-  
-  let ptHits = 0
-  for (const w of ptWords) {
-    if (new RegExp('\\b' + w + '\\b', 'i').test(t)) ptHits++
-  }
-  if (ptAccents.test(t)) ptHits += 2
-
-  const enWords = ['the', 'you', 'hello', 'hi', 'welcome', 'how', 'can', 'help', 'today', 'would', 'like', 'order', 'please', 'food', 'drink', 'water', 'cafeteria', 'school', 'what', 'thank']
-  let enHits = 0
-  for (const w of enWords) {
-    if (new RegExp('\\b' + w + '\\b', 'i').test(t)) enHits++
-  }
-
-  // If text has significant Portuguese guidance, speak with native Portuguese voice
-  if (ptHits > enHits && ptHits >= 2) {
-    return 'pt-BR'
-  }
-
-  const practiceLang = (props.language || '').toLowerCase()
-  if (practiceLang === 'en') return 'en-US'
-  if (practiceLang === 'es') return 'es-ES'
-  if (practiceLang === 'fr') return 'fr-FR'
-  if (defaultLanguage.value === 'en') return 'en-US'
-  if (defaultLanguage.value === 'es') return 'es-ES'
-  if (defaultLanguage.value === 'fr') return 'fr-FR'
-  return 'pt-BR'
-}
-
-const getNaturalVoice = (langCode) => {
-  if (typeof window === 'undefined' || !window.speechSynthesis) return null
-  const voices = cachedVoices.length ? cachedVoices : window.speechSynthesis.getVoices()
-  const targetPrefix = langCode.slice(0, 2).toLowerCase()
-  const matching = voices.filter(v => (v.lang || '').toLowerCase().startsWith(targetPrefix))
-  if (!matching.length) return null
-
-  const bestVoice = matching.find(v => {
-    const n = (v.name || '').toLowerCase()
-    return n.includes('natural') || 
-           n.includes('online') || 
-           n.includes('neural') || 
-           n.includes('google') || 
-           n.includes('jenny') || 
-           n.includes('guy') || 
-           n.includes('samantha') || 
-           n.includes('ava') || 
-           n.includes('francisca') || 
-           n.includes('antonio') || 
-           n.includes('elvira') || 
-           n.includes('denise') ||
-           n.includes('luciana')
-  })
-  return bestVoice || matching[0]
-}
-
-// Pre-unlocked Studio Audio Player
+// 100% Studio Natural Audio Engine (Robotic browser voice fully deleted)
 let studioAudio = null
+const currentlyPlayingId = ref(null)
+
 const getStudioAudio = () => {
   if (typeof window === 'undefined') return null
-  if (!studioAudio) studioAudio = new Audio()
+  if (!studioAudio) {
+    studioAudio = new Audio()
+  }
   return studioAudio
 }
 
+// Unlock audio playback immediately on user interaction
 if (typeof window !== 'undefined') {
   const unlockAudio = () => {
     const a = getStudioAudio()
@@ -398,27 +342,44 @@ if (typeof window !== 'undefined') {
   document.addEventListener('touchstart', unlockAudio, { once: true })
 }
 
-const fallbackSpeechSynthesis = (text, targetLang, onEnd) => {
-  if (!window.speechSynthesis) {
-    if (onEnd) onEnd()
-    return
+const detectSpeechLanguage = (text) => {
+  const t = (text || '').toLowerCase()
+
+  const ptWords = ['você', 'olá', 'em', 'inglês', 'francês', 'espanhol', 'cumprimentar', 'dizer', 'para', 'como', 'vamos', 'tentar', 'comigo', 'pode', 'gostaria', 'pedir', 'aqui', 'estou', 'muito', 'não', 'bom', 'boa', 'dica']
+  const ptAccents = /[áéíóúâêîôûãõçà]/
+  
+  let ptHits = 0
+  for (const w of ptWords) {
+    if (new RegExp('\\b' + w + '\\b', 'i').test(t)) ptHits++
   }
-  window.speechSynthesis.cancel()
-  const utterance = new SpeechSynthesisUtterance(text)
-  const voice = getNaturalVoice(targetLang)
-  if (voice) {
-    utterance.voice = voice
-    utterance.lang = voice.lang || targetLang
-  } else {
-    utterance.lang = targetLang
+  if (ptAccents.test(t)) ptHits += 2
+
+  const enWords = ['the', 'you', 'hello', 'hi', 'welcome', 'how', 'can', 'help', 'today', 'would', 'like', 'order', 'please', 'food', 'drink', 'water', 'cafeteria', 'school', 'what', 'thank', 'lost', 'phone']
+  let enHits = 0
+  for (const w of enWords) {
+    if (new RegExp('\\b' + w + '\\b', 'i').test(t)) enHits++
   }
-  utterance.rate = 0.96
-  utterance.pitch = 1.0
-  if (onEnd) {
-    utterance.onend = () => { onEnd() }
-    utterance.onerror = () => { onEnd() }
+
+  if (ptHits > enHits && ptHits >= 2) {
+    return 'pt-BR'
   }
-  window.speechSynthesis.speak(utterance)
+
+  const practiceLang = (props.language || '').toLowerCase()
+  if (practiceLang === 'en') return 'en-US'
+  if (practiceLang === 'es') return 'es-ES'
+  if (practiceLang === 'fr') return 'fr-FR'
+  return 'pt-BR'
+}
+
+const stopSpeech = () => {
+  const audio = getStudioAudio()
+  if (audio) {
+    try {
+      audio.pause()
+      audio.currentTime = 0
+    } catch {}
+  }
+  currentlyPlayingId.value = null
 }
 
 const speak = (text, onEnd = null) => {
@@ -427,8 +388,9 @@ const speak = (text, onEnd = null) => {
     return
   }
   localStorage.setItem('change-skills-speech-enabled', 'true')
+  stopSpeech()
 
-  // Camaleão fala APENAS a fala do diálogo, NUNCA a dica!
+  // Camaleão fala apenas o diálogo, nunca a dica
   const dialogueOnly = parseMessageParts(text).dialogue || text
   const clean = dialogueOnly
     .replace(/[*_#`~>]/g, '')
@@ -444,30 +406,45 @@ const speak = (text, onEnd = null) => {
   const targetLang = detectSpeechLanguage(clean)
   const langParam = targetLang.slice(0, 2).toLowerCase()
 
-  // Tentativa 1: Áudio Humano de Estúdio (Google Neural via Backend)
   const audio = getStudioAudio()
-  if (audio) {
-    audio.src = `/api/chats/tts?lang=${encodeURIComponent(langParam)}&text=${encodeURIComponent(clean.slice(0, 300))}`
-    let finished = false
-    const finish = () => {
-      if (finished) return
-      finished = true
-      if (onEnd) onEnd()
-    }
-    audio.onended = finish
-    audio.onerror = () => {
-      fallbackSpeechSynthesis(clean, targetLang, finish)
-    }
-    const p = audio.play()
-    if (p !== undefined) {
-      p.catch(() => {
-        fallbackSpeechSynthesis(clean, targetLang, finish)
-      })
-    }
+  if (!audio) {
+    if (onEnd) onEnd()
     return
   }
 
-  fallbackSpeechSynthesis(clean, targetLang, onEnd)
+  audio.src = `/api/chats/tts?lang=${encodeURIComponent(langParam)}&text=${encodeURIComponent(clean.slice(0, 300))}`
+
+  let finished = false
+  const finish = () => {
+    if (finished) return
+    finished = true
+    currentlyPlayingId.value = null
+    if (onEnd) onEnd()
+  }
+
+  audio.onended = finish
+  audio.onerror = () => {
+    finish()
+  }
+
+  const p = audio.play()
+  if (p !== undefined) {
+    p.catch(() => {
+      finish()
+    })
+  }
+}
+
+const playMessageAudio = (msg) => {
+  if (currentlyPlayingId.value === msg.id) {
+    stopSpeech()
+    return
+  }
+  stopSpeech()
+  currentlyPlayingId.value = msg.id
+  speak(msg.content, () => {
+    currentlyPlayingId.value = null
+  })
 }
 
 const toggleVoice = () => {
@@ -627,7 +604,14 @@ function restartScenario() {
   ready.value = false
   initialize()
 }
-onMounted(initialize)
+onMounted(async () => {
+  await initialize()
+  if (props.startInCall) {
+    nextTick(() => {
+      startVoiceCall()
+    })
+  }
+})
 
 
 // Accessibility Font Scale
@@ -903,6 +887,7 @@ const toggleCallMute = () => {
 
 const endVoiceCall = () => {
   isCallActive.value = false
+  if (props.startInCall) { emit('goBack') }
   if (callInterval) clearInterval(callInterval)
   if (callVADInterval) clearInterval(callVADInterval)
   if (callMediaRecorder && callMediaRecorder.state !== 'inactive') {

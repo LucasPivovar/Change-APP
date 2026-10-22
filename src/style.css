@@ -426,3 +426,31 @@ html.font-scale-large {
   margin: 0;
   font-style: italic;
 }
+
+/* Botão Ouvir Pronúncia Natural na Mensagem */
+.msg-audio-play-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: 14px;
+  padding: 3px 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 6px;
+  margin-right: 6px;
+  transition: all 0.2s ease;
+}
+.msg-audio-play-btn:hover {
+  background: rgba(34, 197, 94, 0.22);
+  transform: translateY(-1px);
+}
+.msg-audio-play-btn.is-playing {
+  background: #22c55e;
+  color: white;
+  border-color: #22c55e;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.35);
+}

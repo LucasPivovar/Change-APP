@@ -55,7 +55,7 @@
 </template>
 
 <script setup>
-import { X as XIcon, ChevronRight as ChevronRightIcon, Users as UsersIcon } from '@lucide/vue'
+import { X as XIcon, ChevronRight as ChevronRightIcon, Users as UsersIcon, Phone as PhoneIcon } from '@lucide/vue'
 import { t } from '../data/translations.js'
 
 const emit = defineEmits(['goBack', 'selectMode'])
