@@ -87,3 +87,10 @@ export function wsUrl(path = '/ws') {
 
 export const friendsApi = (path = '', options = {}) => chatApi(`/friends${path}`, options)
 export const groupsApi = (path = '', options = {}) => chatApi(`/groups${path}`, options)
+
+export async function transcribeAudio(audioBase64, mimeType = 'audio/webm', language = 'pt') {
+  return chatApi('/chats/transcribe', {
+    method: 'POST',
+    body: { audioBase64, mimeType, language }
+  })
+}

@@ -3,6 +3,10 @@
     <header class="chat-header">
       <button class="back-btn" aria-label="Voltar" @click="$emit('goBack')"><ChevronLeftIcon :size="24" /></button>
       <div class="user-info"><div class="mascot-avatar-wrapper"><img src="../assets/2.png" alt="" class="avatar" /></div><span class="user-name">Camaleão IA</span></div>
+      <button type="button" class="call-btn" aria-label="Iniciar Ligação" title="Ligar para o Camaleão" :disabled="!ready || scenarioComplete" @click="startVoiceCall">
+        <PhoneIcon :size="16" />
+        <span>Ligar</span>
+      </button>
       <div class="chat-menu-wrapper">
         <button class="menu-dot-btn" aria-label="Opções do chat" @click="isMenuOpen = !isMenuOpen"><MoreVerticalIcon :size="22" /></button>
         <div v-if="isMenuOpen" class="chat-menu">
@@ -75,11 +79,46 @@
       </div>
       <small v-if="cooldownRemaining > 0" class="cooldown-msg">Aguarde {{ cooldownRemaining }}s para enviar outra mensagem.</small>
     </form>
+
+    <!-- Voice Call Full-Screen Overlay (Minimalist & Accessible) -->
+    <div v-if="isCallActive" class="voice-call-overlay" role="dialog" aria-modal="true" aria-label="Chamada de voz com o Camaleão">
+      <div class="call-header-bar">
+        <div class="call-status-indicator">
+          <span class="call-dot" :class="callState"></span>
+          <span class="call-status-label">{{ callStatusLabel }}</span>
+        </div>
+        <div class="call-time-badge">{{ formattedCallDuration }}</div>
+      </div>
+
+      <div class="call-body">
+        <div class="call-avatar-wrapper">
+          <img src="../assets/2.png" alt="Camaleão IA" class="call-avatar-img" :class="{ 'talking': callState === 'speaking' }" />
+        </div>
+        <h2 class="call-title">Camaleão IA</h2>
+        <p class="call-subtitle-status">{{ callHelperStatus }}</p>
+
+        <!-- Legendas de Acessibilidade / Live Subtitles -->
+        <div v-if="callSubtitlesEnabled" class="call-subtitles-card">
+          <div v-if="callLastSpeaker" class="call-subtitle-speaker">{{ callLastSpeaker === 'user' ? 'Você:' : 'Camaleão:' }}</div>
+          <p class="call-subtitle-message">{{ callSubtitleText || 'Fale normalmente... Silêncio de 2s envia sua mensagem.' }}</p>
+        </div>
+      </div>
+
+      <div class="call-footer-bar">
+        <button type="button" class="call-action-btn mute-toggle" :class="{ 'is-muted': isCallMuted }" @click="toggleCallMute" :title="isCallMuted ? 'Desmutar microfone' : 'Mutar microfone'">
+          <MicOffIcon v-if="isCallMuted" :size="24" />
+          <MicIcon v-else :size="24" />
+        </button>
+        <button type="button" class="call-action-btn end-call-btn" @click="endVoiceCall" title="Encerrar ligação">
+          <PhoneOffIcon :size="26" />
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
-import { ChevronLeftIcon, HistoryIcon, LanguagesIcon, LightbulbIcon, MicIcon, MoreVerticalIcon, SendIcon, SettingsIcon } from '@lucide/vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ChevronLeftIcon, HistoryIcon, LanguagesIcon, LightbulbIcon, MicIcon, MicOffIcon, MoreVerticalIcon, PhoneIcon, PhoneOffIcon, SendIcon, SettingsIcon } from '@lucide/vue'
 import { chatApi, currentUser, profileApi } from '../services/chatApi'
 import { scenarioScoreKey } from '../data/practiceScenarios.js'
 const props = defineProps({
@@ -226,12 +265,68 @@ const saveSpeechPreference = () => {
 const saveTranslationPreference = () => {
   localStorage.setItem('change-skills-translation-enabled', translationEnabled.value ? 'true' : 'false')
 }
-const speak = (text) => {
-  if (!speechEnabled.value || !window.speechSynthesis || !text) return
+// Detection of actual spoken language for human-like phonetics
+const detectSpeechLanguage = (text) => {
+  const practiceLang = (props.language || '').toLowerCase()
+  if (practiceLang === 'en' || practiceLang === 'es' || practiceLang === 'fr') {
+    return practiceLang === 'en' ? 'en-US' : practiceLang === 'es' ? 'es-ES' : 'fr-FR'
+  }
+  if (defaultLanguage.value === 'en') return 'en-US'
+  if (defaultLanguage.value === 'es') return 'es-ES'
+  if (defaultLanguage.value === 'fr') return 'fr-FR'
+  return 'pt-BR'
+}
+
+// Select Ultra Natural Voice
+const getNaturalVoice = (langCode) => {
+  if (!window.speechSynthesis) return null
+  const voices = window.speechSynthesis.getVoices()
+  const targetPrefix = langCode.slice(0, 2).toLowerCase()
+  const matching = voices.filter(v => (v.lang || '').toLowerCase().startsWith(targetPrefix))
+  if (!matching.length) return null
+
+  const bestVoice = matching.find(v => {
+    const n = (v.name || '').toLowerCase()
+    return n.includes('natural') || 
+           n.includes('online') || 
+           n.includes('neural') || 
+           n.includes('google') || 
+           n.includes('jenny') || 
+           n.includes('guy') || 
+           n.includes('samantha') || 
+           n.includes('ava') || 
+           n.includes('francisca') || 
+           n.includes('antonio') || 
+           n.includes('elvira') || 
+           n.includes('denise') ||
+           n.includes('luciana')
+  })
+  return bestVoice || matching[0]
+}
+
+const speak = (text, onEnd = null) => {
+  if (!speechEnabled.value || !window.speechSynthesis || !text) {
+    if (onEnd) onEnd()
+    return
+  }
   localStorage.setItem('change-skills-speech-enabled', 'true')
   window.speechSynthesis.cancel()
+
+  const targetLang = detectSpeechLanguage(text)
   const utterance = new SpeechSynthesisUtterance(text)
-  utterance.lang = defaultLanguage.value === 'en' ? 'en-US' : defaultLanguage.value === 'es' ? 'es-ES' : defaultLanguage.value === 'fr' ? 'fr-FR' : 'pt-BR'
+  const voice = getNaturalVoice(targetLang)
+  if (voice) {
+    utterance.voice = voice
+    utterance.lang = voice.lang || targetLang
+  } else {
+    utterance.lang = targetLang
+  }
+  utterance.rate = 0.95
+  utterance.pitch = 1.0
+  if (onEnd) {
+    utterance.onend = () => { onEnd() }
+    utterance.onerror = () => { onEnd() }
+  }
   window.speechSynthesis.speak(utterance)
 }
 const toggleVoice = () => {
@@ -392,6 +487,298 @@ function restartScenario() {
   initialize()
 }
 onMounted(initialize)
+
+
+// Accessibility Font Scale
+const fontScale = ref(localStorage.getItem('change-skills-font-scale') || 'normal')
+const callSubtitlesEnabled = ref(localStorage.getItem('change-skills-call-subtitles') !== 'false')
+
+const applyFontScale = (scale) => {
+  if (typeof document !== 'undefined') {
+    document.documentElement.classList.remove('font-scale-medium', 'font-scale-large')
+    if (scale === 'medium') document.documentElement.classList.add('font-scale-medium')
+    if (scale === 'large') document.documentElement.classList.add('font-scale-large')
+  }
+}
+applyFontScale(fontScale.value)
+
+const saveFontScale = () => {
+  localStorage.setItem('change-skills-font-scale', fontScale.value)
+  applyFontScale(fontScale.value)
+}
+
+const saveCallSubtitlesPreference = () => {
+  localStorage.setItem('change-skills-call-subtitles', callSubtitlesEnabled.value ? 'true' : 'false')
+}
+
+
+
+// Call Mode State
+const isCallActive = ref(false)
+const callState = ref('connecting')
+const callLastSpeaker = ref('')
+const callSubtitleText = ref('')
+const isCallMuted = ref(false)
+const callDurationSeconds = ref(0)
+let callInterval = null
+
+const callStatusLabel = computed(() => {
+  if (callState.value === 'listening') return 'Ouvindo você...'
+  if (callState.value === 'thinking') return 'Pensando...'
+  if (callState.value === 'speaking') return 'Camaleão falando...'
+  return 'Conectando...'
+})
+
+const callHelperStatus = computed(() => {
+  if (callState.value === 'listening') return isCallMuted.value ? 'Microfone mutado' : 'Fale normalmente... O Camaleão responde ao pausar.'
+  if (callState.value === 'thinking') return 'Entendendo o que você falou com Groq Whisper...'
+  if (callState.value === 'speaking') return 'Ouvindo a resposta do Camaleão'
+  return 'Iniciando ligação...'
+})
+
+const formattedCallDuration = computed(() => {
+  const m = Math.floor(callDurationSeconds.value / 60)
+  const s = callDurationSeconds.value % 60
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0')
+})
+
+let callMediaStream = null
+let callAudioContext = null
+let callAnalyser = null
+let callMediaRecorder = null
+let callAudioChunks = []
+let callVADInterval = null
+let callSilenceStart = null
+let callUserSpoke = false
+let callProcessing = false
+
+const startVoiceCall = async () => {
+  if (isCallActive.value) return
+  error.value = ''
+  isCallActive.value = true
+  callState.value = 'connecting'
+  callDurationSeconds.value = 0
+  callLastSpeaker.value = 'assistant'
+  callSubtitleText.value = 'Conectando Ã  chamada...'
+
+  if (callInterval) clearInterval(callInterval)
+  callInterval = setInterval(() => {
+    callDurationSeconds.value++
+  }, 1000)
+
+  try {
+    callMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    const AudioCtx = window.AudioContext || window.webkitAudioContext
+    callAudioContext = new AudioCtx()
+    const source = callAudioContext.createMediaStreamSource(callMediaStream)
+    callAnalyser = callAudioContext.createAnalyser()
+    callAnalyser.fftSize = 512
+    source.connect(callAnalyser)
+
+    startListeningCycle()
+
+    if (!messages.value.length) {
+      const greeting = defaultLanguage.value === 'en' ? 'Hello! I am ready to talk. What would you like to practice today?'
+        : defaultLanguage.value === 'es' ? 'Â¡Hola! Estoy listo para hablar. Â¿De quÃ© quieres hablar hoy?'
+        : defaultLanguage.value === "fr" ? "Bonjour ! Je suis pret a discuter. De quoi voulez-vous parler aujourd'hui ?"
+        : 'OlÃ¡! Estou pronto para conversar. Sobre o que você quer praticar hoje?'
+      callState.value = 'speaking'
+      callSubtitleText.value = greeting
+      speak(greeting, () => {
+        if (isCallActive.value) callState.value = 'listening'
+      })
+    } else {
+      callState.value = 'listening'
+      callSubtitleText.value = 'Pode falar...'
+    }
+  } catch (err) {
+    console.error('Call mic error:', err)
+    error.value = 'NÃ£o foi possÃ­vel acessar o microfone para a ligação.'
+    endVoiceCall()
+  }
+}
+
+const startListeningCycle = () => {
+  if (!isCallActive.value || !callMediaStream) return
+  callAudioChunks = []
+  callUserSpoke = false
+  callSilenceStart = null
+  callProcessing = false
+
+  const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+    : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm'
+    : MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : ''
+
+  callMediaRecorder = new MediaRecorder(callMediaStream, mime ? { mimeType: mime } : undefined)
+  callMediaRecorder.ondataavailable = (e) => {
+    if (e.data && e.data.size > 0) callAudioChunks.push(e.data)
+  }
+  callMediaRecorder.start(200)
+
+  if (callVADInterval) clearInterval(callVADInterval)
+  const bufferLength = callAnalyser.frequencyBinCount
+  const dataArray = new Uint8Array(bufferLength)
+
+  callVADInterval = setInterval(() => {
+    if (!isCallActive.value || callState.value !== 'listening' || isCallMuted.value || callProcessing) return
+
+    callAnalyser.getByteFrequencyData(dataArray)
+    let sum = 0
+    for (let i = 0; i < bufferLength; i++) sum += dataArray[i]
+    const volume = (sum / bufferLength) / 255
+
+    const SPEECH_THRESHOLD = 0.04
+
+    if (volume > SPEECH_THRESHOLD) {
+      callUserSpoke = true
+      callSilenceStart = null
+    } else if (callUserSpoke) {
+      if (!callSilenceStart) {
+        callSilenceStart = Date.now()
+      } else if (Date.now() - callSilenceStart > 2200) {
+        triggerCallTurnProcessing()
+      }
+    }
+  }, 70)
+}
+
+const triggerCallTurnProcessing = async () => {
+  if (callProcessing || !isCallActive.value) return
+  callProcessing = true
+  if (callVADInterval) clearInterval(callVADInterval)
+  callState.value = 'thinking'
+
+  try {
+    if (callMediaRecorder && callMediaRecorder.state !== 'inactive') {
+      callMediaRecorder.stop()
+    }
+    await new Promise(r => setTimeout(r, 200))
+
+    if (!callAudioChunks.length) {
+      callState.value = 'listening'
+      startListeningCycle()
+      return
+    }
+
+    const mime = callMediaRecorder?.mimeType || 'audio/webm'
+    const audioBlob = new Blob(callAudioChunks, { type: mime })
+    if (audioBlob.size < 1000) {
+      callState.value = 'listening'
+      startListeningCycle()
+      return
+    }
+
+    const reader = new FileReader()
+    const base64Promise = new Promise((resolve, reject) => {
+      reader.onloadend = () => resolve(reader.result)
+      reader.onerror = reject
+    })
+    reader.readAsDataURL(audioBlob)
+    const base64Data = await base64Promise
+
+    const transcribeResult = await chatApi('/chats/transcribe', {
+      method: 'POST',
+      body: {
+        audioBase64: base64Data,
+        mimeType: mime,
+        language: props.language || defaultLanguage.value
+      }
+    })
+
+    const text = (transcribeResult?.text || '').trim()
+    if (!text || text.length < 2) {
+      callState.value = 'listening'
+      startListeningCycle()
+      return
+    }
+
+    callLastSpeaker.value = 'user'
+    callSubtitleText.value = text
+
+    const saved = await sendDirectMessage(text)
+    if (saved && saved.assistant_text) {
+      callLastSpeaker.value = 'assistant'
+      callSubtitleText.value = saved.assistant_text
+      callState.value = 'speaking'
+      speak(saved.assistant_text, () => {
+        if (isCallActive.value) {
+          callState.value = 'listening'
+          startListeningCycle()
+        }
+      })
+    } else {
+      callState.value = 'listening'
+      startListeningCycle()
+    }
+  } catch (err) {
+    console.error('Call speech error:', err)
+    if (isCallActive.value) {
+      callState.value = 'listening'
+      startListeningCycle()
+    }
+  }
+}
+
+const sendDirectMessage = async (content) => {
+  if (!activeId) {
+    const created = await chatApi('/chats', {
+      method: 'POST',
+      body: { title: content.slice(0, 30), language: props.language, courseId: props.courseId }
+    })
+    activeId = created.id
+    emit('created', activeId)
+  }
+  const requestId = 'call-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
+  const result = await chatApi('/chats/' + activeId + '/messages', {
+    method: 'POST',
+    body: { content, requestId, translate: translationEnabled.value }
+  })
+  if (result.messages && result.messages.length) {
+    for (const m of result.messages) {
+      if (!messages.value.find(existing => existing.id === m.id)) {
+        messages.value.push(m)
+      }
+    }
+    await scrollToBottom()
+    const lastBot = result.messages.find(m => m.role === 'assistant')
+    return { user_text: content, assistant_text: lastBot?.content || '' }
+  }
+  return null
+}
+
+const toggleCallMute = () => {
+  isCallMuted.value = !isCallMuted.value
+  if (callMediaStream) {
+    callMediaStream.getAudioTracks().forEach(track => {
+      track.enabled = !isCallMuted.value
+    })
+  }
+}
+
+const endVoiceCall = () => {
+  isCallActive.value = false
+  if (callInterval) clearInterval(callInterval)
+  if (callVADInterval) clearInterval(callVADInterval)
+  if (callMediaRecorder && callMediaRecorder.state !== 'inactive') {
+    try { callMediaRecorder.stop() } catch {}
+  }
+  if (callMediaStream) {
+    callMediaStream.getTracks().forEach(t => t.stop())
+    callMediaStream = null
+  }
+  if (callAudioContext && callAudioContext.state !== 'closed') {
+    try { callAudioContext.close() } catch {}
+  }
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel()
+  }
+  scrollToBottom()
+}
+
+onUnmounted(() => {
+  endVoiceCall()
+})
+
 </script>
 <style scoped>
 .chat-container {
