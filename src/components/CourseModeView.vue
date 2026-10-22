@@ -1,73 +1,110 @@
-﻿<template>
+<template>
   <div class="modal-backdrop" @click.self="$emit('goBack')">
     <transition name="slide-up" appear>
       <div class="mode-container">
-        <div class="header-bar">
+        <!-- Header Bar -->
+        <div class="header-bar" :class="{ 'with-back': step === 'camaleao' }">
+          <button v-if="step === 'camaleao'" class="back-btn-header" @click="step = 'main'" aria-label="Voltar">
+            <ChevronLeftIcon size="20" stroke-width="2.5" />
+            <span>Voltar</span>
+          </button>
           <button class="close-btn" @click="$emit('goBack')" aria-label="Fechar">
             <XIcon size="28" stroke-width="2.5" />
           </button>
         </div>
 
         <div class="mode-content">
-          <div class="mascot-header-row">
-            <div class="text-col">
-              <h2>Pratique com o Camaleão</h2>
-              <p class="subtitle-text">Escolha como prefere praticar seu idioma hoje.</p>
-            </div>
-            <div class="img-col">
-              <img src="../assets/camaleao.png" class="peeking-mascot" alt="Camaleão" />
-            </div>
-          </div>
-          
-          <div class="options-list">
-            <!-- 1. Prática Diária (Cenários com roteiro pré-determinado) -->
-            <div class="option-card mascot-card" @click="selectMode('daily-practice')">
-              <div class="icon-wrapper mascot-icon-wrapper" style="overflow: hidden; padding: 0;">
-                <img src="../assets/2.png" style="width: 100%; height: 100%; object-fit: cover;" class="main-icon" alt="Camaleão" />
+          <transition name="step-fade" mode="out-in">
+            <!-- PASSO 1: Menu Principal da Modalidade (Pratique com o Camaleão / Chat em tempo real) -->
+            <div v-if="step === 'main'" key="main-step" class="step-wrapper">
+              <div class="mascot-header-row">
+                <div class="text-col">
+                  <h2>Prática do Idioma</h2>
+                  <p class="subtitle-text">Escolha como prefere praticar seu idioma hoje.</p>
+                </div>
+                <div class="img-col">
+                  <img src="../assets/camaleao.png" class="peeking-mascot" alt="Camaleão" />
+                </div>
               </div>
-              <div class="option-text">
-                <h3>Prática Diária</h3>
-                <p>Cenários do dia a dia com roteiro e objetivo (ex: Lanche na escola, Compras).</p>
+
+              <div class="options-list">
+                <!-- 1. Pratique com o Camaleão -->
+                <div class="option-card mascot-card" @click="step = 'camaleao'">
+                  <div class="icon-wrapper mascot-icon-wrapper" style="overflow: hidden; padding: 0;">
+                    <img src="../assets/2.png" style="width: 100%; height: 100%; object-fit: cover;" class="main-icon" alt="Camaleão" />
+                  </div>
+                  <div class="option-text">
+                    <h3>Pratique com o Camaleão</h3>
+                    <p>Prática diária por cenários, call de voz ao vivo ou chat livre com IA.</p>
+                  </div>
+                  <ChevronRightIcon class="arrow-icon" size="24" stroke-width="2.5" />
+                </div>
+
+                <!-- 2. Chat em tempo real -->
+                <div class="option-card student-card" @click="selectMode('student')">
+                  <div class="icon-wrapper student-icon-wrapper">
+                    <UsersIcon size="28" stroke-width="2.5" />
+                  </div>
+                  <div class="option-text">
+                    <h3>Chat em tempo real</h3>
+                    <p>Encontre outro aluno da mesma modalidade para conversar por 5 minutos.</p>
+                  </div>
+                  <ChevronRightIcon class="arrow-icon" size="24" stroke-width="2.5" />
+                </div>
               </div>
-              <ChevronRightIcon class="arrow-icon" size="24" stroke-width="2.5" />
             </div>
 
-            <!-- 2. Call com o Camaleão (Chamada por Voz ao Vivo) -->
-            <div class="option-card call-card" @click="selectMode('call')">
-              <div class="icon-wrapper call-icon-wrapper">
-                <PhoneIcon size="26" stroke-width="2.5" />
+            <!-- PASSO 2: Dentro do Pratique com o Camaleão (Prática Diária, Call com o Camaleão, Chat Livre) -->
+            <div v-else key="camaleao-step" class="step-wrapper">
+              <div class="mascot-header-row">
+                <div class="text-col">
+                  <h2>Pratique com o Camaleão</h2>
+                  <p class="subtitle-text">Escolha como prefere praticar com o Camaleão:</p>
+                </div>
+                <div class="img-col">
+                  <img src="../assets/camaleao.png" class="peeking-mascot" alt="Camaleão" />
+                </div>
               </div>
-              <div class="option-text">
-                <h3>Call com o Camaleão</h3>
-                <p>Chamada por voz ao vivo com o Camaleão 3D. Pratique sua fala sem digitar!</p>
-              </div>
-              <ChevronRightIcon class="arrow-icon" size="24" stroke-width="2.5" />
-            </div>
 
-            <!-- 3. Chat Livre com o Camaleão (Sem assuntos pré-determinados) -->
-            <div class="option-card free-chat-card" @click="selectMode('free-chat')">
-              <div class="icon-wrapper free-chat-icon-wrapper">
-                <MessageSquareIcon size="26" stroke-width="2.5" />
-              </div>
-              <div class="option-text">
-                <h3>Chat Livre com o Camaleão</h3>
-                <p>Conversa aberta e sem roteiro. Converse sobre qualquer assunto dentro da modalidade!</p>
-              </div>
-              <ChevronRightIcon class="arrow-icon" size="24" stroke-width="2.5" />
-            </div>
+              <div class="options-list">
+                <!-- 1. Prática Diária (Cenários do dia a dia) -->
+                <div class="option-card mascot-card" @click="selectMode('daily-practice')">
+                  <div class="icon-wrapper mascot-icon-wrapper" style="overflow: hidden; padding: 0;">
+                    <img src="../assets/2.png" style="width: 100%; height: 100%; object-fit: cover;" class="main-icon" alt="Camaleão" />
+                  </div>
+                  <div class="option-text">
+                    <h3>Prática Diária</h3>
+                    <p>Cenários do dia a dia com roteiro e objetivo (ex: Lanche na escola, Compras).</p>
+                  </div>
+                  <ChevronRightIcon class="arrow-icon" size="24" stroke-width="2.5" />
+                </div>
 
-            <!-- 4. Chat em Tempo Real com Alunos -->
-            <div class="option-card student-card" @click="selectMode('student')">
-              <div class="icon-wrapper student-icon-wrapper">
-                <UsersIcon size="28" stroke-width="2.5" />
+                <!-- 2. Call com o Camaleão (Voz ao vivo) -->
+                <div class="option-card call-card" @click="selectMode('call')">
+                  <div class="icon-wrapper call-icon-wrapper">
+                    <PhoneIcon size="26" stroke-width="2.5" />
+                  </div>
+                  <div class="option-text">
+                    <h3>Call com o Camaleão</h3>
+                    <p>Chamada por voz ao vivo com o Camaleão 3D. Pratique sua fala sem digitar!</p>
+                  </div>
+                  <ChevronRightIcon class="arrow-icon" size="24" stroke-width="2.5" />
+                </div>
+
+                <!-- 3. Chat Livre com o Camaleão (Conversa aberta sem roteiro) -->
+                <div class="option-card free-chat-card" @click="selectMode('free-chat')">
+                  <div class="icon-wrapper free-chat-icon-wrapper">
+                    <MessageSquareIcon size="26" stroke-width="2.5" />
+                  </div>
+                  <div class="option-text">
+                    <h3>Chat Livre com o Camaleão</h3>
+                    <p>Conversa aberta e sem roteiro pré-determinado. Fale sobre o que quiser!</p>
+                  </div>
+                  <ChevronRightIcon class="arrow-icon" size="24" stroke-width="2.5" />
+                </div>
               </div>
-              <div class="option-text">
-                <h3>Chat em tempo real</h3>
-                <p>Encontre outro aluno da mesma modalidade para conversar por 5 minutos.</p>
-              </div>
-              <ChevronRightIcon class="arrow-icon" size="24" stroke-width="2.5" />
             </div>
-          </div>
+          </transition>
 
           <div class="bottom-banner-wrapper">
             <div class="bottom-banner-pill">
@@ -82,9 +119,20 @@
 </template>
 
 <script setup>
-import { X as XIcon, ChevronRight as ChevronRightIcon, Users as UsersIcon, Phone as PhoneIcon, MessageSquare as MessageSquareIcon } from '@lucide/vue'
+import { ref, watch } from 'vue'
+import { X as XIcon, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, Users as UsersIcon, Phone as PhoneIcon, MessageSquare as MessageSquareIcon } from '@lucide/vue'
+
+const props = defineProps({
+  initialStep: { type: String, default: 'main' }
+})
 
 const emit = defineEmits(['goBack', 'selectMode'])
+
+const step = ref(props.initialStep || 'main')
+
+watch(() => props.initialStep, (newVal) => {
+  if (newVal) step.value = newVal
+})
 
 const selectMode = (mode) => {
   emit('selectMode', mode)
@@ -129,7 +177,31 @@ const selectMode = (mode) => {
 .header-bar {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   padding: 14px 20px 8px;
+}
+
+.header-bar.with-back {
+  justify-content: space-between;
+}
+
+.back-btn-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  border: none;
+  color: #1c5bf0;
+  font-size: 13.5px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.back-btn-header:hover {
+  background: #e2e8f0;
 }
 
 .close-btn {
@@ -146,6 +218,25 @@ const selectMode = (mode) => {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+}
+
+.step-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.step-fade-enter-active,
+.step-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.step-fade-enter-from {
+  opacity: 0;
+  transform: translateX(10px);
+}
+.step-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-10px);
 }
 
 .mascot-header-row {

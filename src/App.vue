@@ -95,7 +95,10 @@ const handleLanguageSelect = (lang) => {
   currentForm.value = 'language-courses'
 }
 
+const courseModeInitialStep = ref("main")
+
 const handleCourseSelect = (course) => {
+  courseModeInitialStep.value = "main"
   selectedCourse.value = course
   currentForm.value = 'course-mode'
 }
@@ -236,7 +239,8 @@ const handleGoBack = () => {
 
   <transition name="slide-up">
     <CourseModeView 
-      v-if="currentForm === 'course-mode'" 
+      v-if="currentForm === 'course-mode'"
+      :initialStep="courseModeInitialStep" 
       @goBack="currentForm = 'language-courses'"
       @selectMode="handleModeSelect"
     />
@@ -276,7 +280,7 @@ const handleGoBack = () => {
       v-if="currentForm === 'practice-scenarios'"
       :language="selectedLanguage || 'en'"
       :courseId="selectedCourse || 'general'"
-      @goBack="currentForm = 'course-mode'"
+      @goBack="() => { courseModeInitialStep = 'camaleao'; currentForm = 'course-mode' }"
       @selectScenario="handleScenarioSelect"
     />
   </transition>
@@ -291,7 +295,7 @@ const handleGoBack = () => {
       :startInCall="startWithVoiceCall"
       @created="activeAiChatId = $event"
       @history="currentForm = 'conversations'"
-      @goBack="handleGoBack"
+      @goBack="() => { courseModeInitialStep = 'camaleao'; currentForm = 'course-mode' }"
     />
   </transition>
 
