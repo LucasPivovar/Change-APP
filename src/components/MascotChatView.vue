@@ -189,11 +189,14 @@ const parseMessageParts = (content) => {
   if (!content) return { dialogue: '', hint: '' }
 
   // 1. Dica / Sugestão formatada entre parênteses ou no fim
-  const match = content.match(/[\(\[]\s*(?:Dica|Tip|Conseil|Consejo|Sugest[aã]o)[^:]*:\s*([\s\S]*?)[\)\]]/i) ||
+  const match = content.match(/\(\s*(?:Dica|Tip|Conseil|Consejo|Sugest[aã]o)[^:]*:\s*([\s\S]*?)\)\s*$/i) ||
+                content.match(/\[\s*(?:Dica|Tip|Conseil|Consejo|Sugest[aã]o)[^:]*:\s*([\s\S]*?)\]\s*$/i) ||
+                content.match(/[\(\[]\s*(?:Dica|Tip|Conseil|Consejo|Sugest[aã]o)[^:]*:\s*([\s\S]*?)[\)\]]\s*$/i) ||
                 content.match(/(?:Dica|Tip|Conseil|Consejo|Sugest[aã]o)[^:]*:\s*([\s\S]*)$/i)
   if (match) {
     const hint = match[1].trim()
-    const dialogue = content.replace(match[0], '').trim()
+    let dialogue = content.replace(match[0], '').trim()
+    dialogue = dialogue.replace(/[\s\r\n]+[."”'\)\]]+$/, '').trim()
     return { dialogue, hint }
   }
 
@@ -201,12 +204,14 @@ const parseMessageParts = (content) => {
   const inlineMatch = content.match(/(?:(?:Hi|Hello|Ol[aá])[^!\n]+!\s*)?(?:You said|Voc[eê] disse)[\s\S]*?(?:In English you(?:'d| would| can) say|Em (?:ingl[eê]s|espanhol|franc[eê]s) voc[eê] pode dizer)[^"“]*["“]([^"”]+)["”][.\s]*([\s\S]*)/i)
   if (inlineMatch) {
     const betterSaid = inlineMatch[1].trim()
-    const restOfDialogue = inlineMatch[2].trim()
+    let restOfDialogue = inlineMatch[2].trim()
+    restOfDialogue = restOfDialogue.replace(/[\s\r\n]+[."”'\)\]]+$/, '').trim()
     const hint = `Para soar mais natural, você poderia ter dito: "${betterSaid}"`
     return { dialogue: restOfDialogue || content, hint }
   }
 
-  return { dialogue: content, hint: '' }
+  const cleanDialogue = content.replace(/[\s\r\n]+[."”'\)\]]+$/, '').trim()
+  return { dialogue: cleanDialogue, hint: '' }
 }
 
 const speechEnabled = ref(localStorage.getItem('change-skills-speech-enabled') === 'true')
